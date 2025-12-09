@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>【深度版】青年学生助力深圳生态文明建设</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: #FDFBF7; /* 暖米色背景 */
+            color: #334155;
+            overflow: hidden; 
+        }
+
+        /* 幻灯片基础样式 */
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transform: translateX(100px); /* 默认向右偏移，进场时归位 */
+            transition: opacity 0.6s ease, transform 0.6s ease;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            box-sizing: border-box;
+            z-index: 0;
+            visibility: hidden; /* 彻底隐藏防止屏幕阅读器干扰 */
+        }
+
+        .slide.active {
+            opacity: 1;
+            transform: translateX(0);
+            pointer-events: all;
+            z-index: 10;
+            visibility: visible;
+        }
+
+        .slide.prev {
+            transform: translateX(-100px);
+            opacity: 0;
+        }
+
+        /* 内容入场动画 */
+        .slide.active .animate-enter {
+            animation: slideUpFade 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        
+        .delay-100 { animation-delay: 0.1s; }
+        .delay-200 { animation-delay: 0.2s; }
+        .delay-300 { animation-delay: 0.3s; }
+        .delay-400 { animation-delay: 0.4s; }
+        .delay-500 { animation-delay: 0.5s; }
+
+        @keyframes slideUpFade {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* UI 组件 */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.9);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        }
+
+        .highlight-text {
+            color: #059669;
+            font-weight: 700;
+        }
+
+        /* 控制栏样式 */
+        .control-btn {
+            transition: all 0.2s;
+        }
+        .control-btn:hover {
+            background-color: #ecfdf5; /* emerald-50 */
+            color: #059669;
+            transform: scale(1.1);
+        }
+        .control-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* 进度条 */
+        .progress-bar {
+            height: 6px;
+            background: #059669;
+            width: 0%;
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        /* 装饰背景 */
+        .blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: -1;
+            opacity: 0.4;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen relative">
+
+    <!-- 底部控制栏 -->
+    <div class="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 flex flex-col items-center gap-2 w-full pointer-events-none">
+        <!-- 按钮组 -->
+        <div class="flex items-center gap-6 px-6 py-3 bg-white/90 rounded-full shadow-xl border border-gray-200 backdrop-blur-md pointer-events-auto">
+            <button onclick="prevSlide()" class="control-btn w-10 h-10 rounded-full flex items-center justify-center text-gray-500 text-lg" title="上一页 (←)">
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            
+            <span class="text-sm font-mono text-gray-500 w-20 text-center select-none font-bold">
+                <span id="current-slide">1</span> / <span id="total-slides">11</span>
+            </span>
+            
+            <button onclick="nextSlide()" class="control-btn w-10 h-10 rounded-full flex items-center justify-center text-gray-500 text-lg" title="下一页 (→ / Space)">
+                <i class="fa-solid fa-arrow-right"></i>
+            </button>
+
+            <div class="w-px h-6 bg-gray-300 mx-2"></div>
+
+            <button onclick="toggleFullScreen()" class="control-btn w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:text-emerald-600" title="全屏演示">
+                <i class="fa-solid fa-expand" id="fs-icon"></i>
+            </button>
+        </div>
+        
+        <!-- 键盘提示 -->
+        <div class="text-[10px] text-gray-400 font-mono opacity-60">使用键盘方向键或空格键切换</div>
+    </div>
+
+    <!-- 底部进度条 -->
+    <div class="fixed bottom-0 left-0 w-full h-1.5 bg-gray-200 z-50">
+        <div class="progress-bar" id="progress"></div>
+    </div>
+
+    <!-- 幻灯片容器 -->
+    <main id="presentation-container" class="w-full h-full relative overflow-hidden">
+
+        <!-- Slide 1: 封面 -->
+        <section class="slide active">
+            <div class="blob bg-emerald-300 w-96 h-96 top-[-10%] right-[-10%]"></div>
+            <div class="blob bg-orange-200 w-80 h-80 bottom-[-10%] left-[-10%]"></div>
+            
+            <div class="text-center max-w-5xl animate-enter">
+                <div class="inline-block px-4 py-2 rounded-full bg-emerald-100 text-emerald-800 text-sm font-bold tracking-wider mb-6 shadow-sm border border-emerald-200">
+                    <i class="fa-solid fa-book-open mr-2"></i>新时代中国特色社会主义思想概论 · 课后调研报告
+                </div>
+                <h1 class="text-5xl md:text-7xl font-black text-slate-800 leading-tight mb-8 tracking-tight">
+                    青年学生如何助力<br>
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-500">深圳生态文明</span>建设
+                </h1>
+                <p class="text-xl md:text-2xl text-gray-500 font-light max-w-3xl mx-auto mb-12 delay-100 animate-enter">
+                    基于“知信行”统一视角的路径探索与实践方案
+                </p>
+                
+                <div class="grid grid-cols-2 gap-8 text-left max-w-md mx-auto text-sm text-gray-600 bg-white/50 p-6 rounded-xl border border-gray-100 delay-200 animate-enter">
+                    <div>
+                        <p class="text-xs text-gray-400 uppercase">汇报人</p>
+                        <p class="font-bold text-gray-800 text-lg">李某某</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-400 uppercase">学号</p>
+                        <p class="font-bold text-gray-800 text-lg">2023xxxxxx</p>
+                    </div>
+                    <div class="col-span-2 border-t border-gray-200 pt-4 mt-2">
+                        <p class="text-xs text-gray-400 uppercase">指导思想</p>
+                        <p class="font-medium">习近平生态文明思想</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 2: 理论背景 -->
+        <section class="slide">
+            <div class="container mx-auto px-16 h-full flex flex-col justify-center">
+                <h2 class="text-4xl font-bold text-slate-800 mb-2 animate-enter">一、理论指引与时代背景</h2>
+                <div class="w-20 h-1.5 bg-emerald-500 rounded mb-10 animate-enter"></div>
+
+                <div class="grid md:grid-cols-2 gap-12">
+                    <div class="glass-card p-8 rounded-2xl animate-enter delay-100">
+                        <div class="flex items-center gap-4 mb-4">
+                            <div class="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 text-xl">
+                                <i class="fa-solid fa-seedling"></i>
+                            </div>
+                            <h3 class="text-xl font-bold">习近平生态文明思想</h3>
+                        </div>
+                        <p class="text-gray-600 leading-relaxed mb-4">
+                            “绿水青山就是金山银山”。党的二十大报告指出，必须牢固树立和践行绿水青山就是金山银山的理念，站在人与自然和谐共生的高度谋划发展。
+                        </p>
+                        <div class="text-sm bg-emerald-50 text-emerald-800 p-3 rounded-lg border-l-4 border-emerald-500">
+                            <strong>核心要义：</strong> 生态兴则文明兴，坚持人与自然和谐共生。
+                        </div>
+                    </div>
+
+                    <div class="glass-card p-8 rounded-2xl animate-enter delay-200">
+                        <div class="flex items-center gap-4 mb-4">
+                            <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-xl">
+                                <i class="fa-solid fa-city"></i>
+                            </div>
+                            <h3 class="text-xl font-bold">深圳的使命</h3>
+                        </div>
+                        <p class="text-gray-600 leading-relaxed mb-4">
+                            深圳不仅是经济特区，更是<span class="highlight-text">中国特色社会主义先行示范区</span>。中央要求深圳在生态文明建设上先行先试，打造“可持续发展先锋”。
+                        </p>
+                        <div class="text-sm bg-blue-50 text-blue-800 p-3 rounded-lg border-l-4 border-blue-500">
+                            <strong>实践要求：</strong> 从“深圳速度”转向“深圳质量”，率先实现绿色转型。
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 3: 现状分析（数据） -->
+        <section class="slide">
+            <div class="container mx-auto px-16 h-full flex flex-col justify-center">
+                <h2 class="text-4xl font-bold text-slate-800 mb-8 animate-enter">二、现状调研：成就与“温差”</h2>
+                
+                <div class="grid grid-cols-12 gap-8 items-center h-full max-h-[60vh]">
+                    <!-- 左侧：成就 -->
+                    <div class="col-span-5 space-y-6 animate-enter delay-100">
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-emerald-100">
+                            <h3 class="text-lg font-bold text-gray-700 mb-2">宏观成就显著</h3>
+                            <ul class="space-y-3 text-sm text-gray-600">
+                                <li class="flex items-center"><i class="fa-solid fa-check-circle text-emerald-500 mr-2"></i> "千园之城"：公园总数超1200个</li>
+                                <li class="flex items-center"><i class="fa-solid fa-check-circle text-emerald-500 mr-2"></i> 空气质量：PM2.5 浓度国内领先</li>
+                                <li class="flex items-center"><i class="fa-solid fa-check-circle text-emerald-500 mr-2"></i> 绿色交通：公交/出租车100%电动化</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="bg-amber-50 p-6 rounded-xl border border-amber-100">
+                            <h3 class="text-lg font-bold text-amber-800 mb-2"><i class="fa-solid fa-triangle-exclamation mr-2"></i>微观存在“温差”</h3>
+                            <p class="text-sm text-amber-900/80 leading-relaxed">
+                                调研发现，虽然硬件设施完善，但在<span class="font-bold underline">市民生活习惯</span>及<span class="font-bold underline">社区末端执行</span>上仍有不足。如快递包装浪费严重、垃圾分类准确率波动大。
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- 右侧：图表 -->
+                    <div class="col-span-7 bg-white p-8 rounded-2xl shadow-lg border border-gray-100 animate-enter delay-200">
+                        <h4 class="text-center text-gray-500 font-bold mb-8 uppercase text-sm tracking-wider">生态文明建设效能对比评估</h4>
+                        
+                        <!-- 只有 CSS 的条形图 -->
+                        <div class="space-y-8">
+                            <!-- Item 1 -->
+                            <div class="relative">
+                                <div class="flex justify-between mb-2">
+                                    <span class="font-bold text-gray-700">政府政策与投入</span>
+                                    <span class="font-bold text-emerald-600">95 分</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-3">
+                                    <div class="bg-emerald-600 h-3 rounded-full" style="width: 95%"></div>
+                                </div>
+                            </div>
+
+                            <!-- Item 2 -->
+                            <div class="relative">
+                                <div class="flex justify-between mb-2">
+                                    <span class="font-bold text-gray-700">科技手段应用</span>
+                                    <span class="font-bold text-emerald-500">88 分</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-3">
+                                    <div class="bg-emerald-500 h-3 rounded-full" style="width: 88%"></div>
+                                </div>
+                            </div>
+
+                            <!-- Item 3 -->
+                            <div class="relative">
+                                <div class="flex justify-between mb-2">
+                                    <span class="font-bold text-gray-700">青年参与深度</span>
+                                    <span class="font-bold text-amber-500">55 分</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-3">
+                                    <div class="bg-amber-400 h-3 rounded-full relative" style="width: 55%">
+                                        <!-- Callout -->
+                                        <div class="absolute right-0 -top-10 bg-amber-100 text-amber-800 text-xs font-bold px-2 py-1 rounded shadow-sm border border-amber-200">
+                                            提升空间巨大
+                                            <div class="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-2 h-2 bg-amber-100 rotate-45 border-b border-r border-amber-200"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 4: 问题剖析 -->
+        <section class="slide">
+            <div class="container mx-auto px-16 h-full flex flex-col justify-center text-center">
+                <h2 class="text-4xl font-bold text-slate-800 mb-12 animate-enter">三、问题剖析：知易行难的困境</h2>
+                
+                <div class="grid md:grid-cols-3 gap-8 text-left">
+                    <div class="glass-card p-8 rounded-xl border-t-4 border-red-400 animate-enter delay-100 hover:-translate-y-2 transition-transform">
+                        <div class="text-red-400 text-4xl mb-4"><i class="fa-regular fa-eye-slash"></i></div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-3">意识悬浮</h3>
+                        <p class="text-gray-500 text-sm leading-relaxed">
+                            许多同学对环保口号耳熟能详，但认为这主要是政府的责任，缺乏“我是第一责任人”的主体意识。
+                        </p>
+                    </div>
+
+                    <div class="glass-card p-8 rounded-xl border-t-4 border-orange-400 animate-enter delay-200 hover:-translate-y-2 transition-transform">
+                        <div class="text-orange-400 text-4xl mb-4"><i class="fa-solid fa-couch"></i></div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-3">习惯惰性</h3>
+                        <p class="text-gray-500 text-sm leading-relaxed">
+                            一次性餐具、过度包装、空调温度过低等“高碳”生活方式因其便利性，难以在短时间内被改变。
+                        </p>
+                    </div>
+
+                    <div class="glass-card p-8 rounded-xl border-t-4 border-yellow-400 animate-enter delay-300 hover:-translate-y-2 transition-transform">
+                        <div class="text-yellow-400 text-4xl mb-4"><i class="fa-solid fa-unlink"></i></div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-3">渠道匮乏</h3>
+                        <p class="text-gray-500 text-sm leading-relaxed">
+                            除了传统的植树节、扫大街，缺乏结合青年专业特长（如IT、设计、传播）的创新型环保参与渠道。
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 5: 总体框架 -->
+        <section class="slide">
+            <div class="container mx-auto px-16 h-full flex flex-col justify-center items-center">
+                <div class="text-center mb-16 animate-enter">
+                    <h2 class="text-4xl font-bold text-slate-800 mb-4">四、解决方案：构建“三位一体”行动体系</h2>
+                    <p class="text-xl text-gray-500">针对上述问题，提出青年学生助力生态文明建设的核心路径</p>
+                </div>
+
+                <div class="relative flex items-center justify-center gap-12 w-full max-w-5xl">
+                    <!-- 箭头连接线 -->
+                    <div class="absolute top-1/2 left-0 w-full h-1 bg-gradient-to-r from-emerald-200 via-emerald-400 to-emerald-200 -z-10 transform -translate-y-1/2"></div>
+
+                    <!-- Step 1 -->
+                    <div class="bg-white p-8 rounded-full w-64 h-64 flex flex-col items-center justify-center shadow-lg border-4 border-emerald-50 z-10 animate-enter delay-100 hover:scale-105 transition-transform">
+                        <i class="fa-solid fa-brain text-4xl text-emerald-600 mb-4"></i>
+                        <h3 class="text-xl font-bold text-gray-800">内化于心</h3>
+                        <span class="text-xs text-gray-400 mt-2">（价值观重塑）</span>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div class="bg-emerald-600 p-8 rounded-full w-72 h-72 flex flex-col items-center justify-center shadow-xl border-4 border-white z-10 animate-enter delay-200 transform scale-110">
+                        <i class="fa-solid fa-person-walking text-5xl text-white mb-4"></i>
+                        <h3 class="text-2xl font-bold text-white">外化于行</h3>
+                        <span class="text-sm text-emerald-100 mt-2">（具体行动实践）</span>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div class="bg-white p-8 rounded-full w-64 h-64 flex flex-col items-center justify-center shadow-lg border-4 border-emerald-50 z-10 animate-enter delay-300 hover:scale-105 transition-transform">
+                        <i class="fa-solid fa-bullhorn text-4xl text-emerald-600 mb-4"></i>
+                        <h3 class="text-xl font-bold text-gray-800">传播于众</h3>
+                        <span class="text-xs text-gray-400 mt-2">（社会影响力）</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 6: 行动一（校园） -->
+        <section class="slide">
+            <div class="container mx-auto px-16 h-full grid grid-cols-2 gap-12 items-center">
+                <div class="animate-enter">
+                    <span class="text-emerald-600 font-bold tracking-widest uppercase text-sm mb-2 block">场景一：绿色校园</span>
+                    <h2 class="text-4xl font-bold text-slate-800 mb-6">从宿舍到实验室<br>打造“零废弃”生活圈</h2>
+                    <p class="text-gray-600 mb-8 text-lg">
+                        校园是学生生活的主阵地。通过制度创新和自我管理，将节约理念渗透到学习生活的每一个细节。
+                    </p>
+                    <div class="flex flex-col gap-4">
+                        <div class="flex items-start gap-4 p-4 bg-white rounded-lg shadow-sm border-l-4 border-emerald-500">
+                            <i class="fa-solid fa-utensils text-emerald-600 mt-1"></i>
+                            <div>
+                                <h4 class="font-bold text-gray-800">光盘行动 2.0</h4>
+                                <p class="text-sm text-gray-500">引入AI打卡与积分兑换机制，将“节约粮食”转化为可视化公益积分。</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4 p-4 bg-white rounded-lg shadow-sm border-l-4 border-emerald-500">
+                            <i class="fa-solid fa-book text-emerald-600 mt-1"></i>
+                            <div>
+                                <h4 class="font-bold text-gray-800">教材与物资循环</h4>
+                                <p class="text-sm text-gray-500">建立常态化的毕业生旧物“跳蚤市场”和教材漂流角，减少纸张消耗。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="h-96 bg-emerald-100 rounded-2xl relative overflow-hidden flex items-center justify-center animate-enter delay-200">
+                    <i class="fa-solid fa-school text-9xl text-emerald-200"></i>
+                    <!-- 装饰元素 -->
+                    <div class="absolute bottom-6 left-6 right-6 bg-white/90 p-4 rounded-xl backdrop-blur-sm shadow-lg">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-bold text-gray-600">预期成效</span>
+                            <span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">年化估算</span>
+                        </div>
+                        <div class="mt-2 text-2xl font-bold text-emerald-600">-15% <span class="text-sm text-gray-500 font-normal">校园厨余垃圾</span></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 7: 行动二（社区） -->
+        <section class="slide">
+            <div class="container mx-auto px-16 h-full grid grid-cols-2 gap-12 items-center">
+                <!-- 图示在左 -->
+                <div class="h-96 bg-orange-100 rounded-2xl relative overflow-hidden flex items-center justify-center animate-enter order-last md:order-first">
+                    <i class="fa-solid fa-users-line text-9xl text-orange-200"></i>
+                    <div class="absolute bottom-6 left-6 right-6 bg-white/90 p-4 rounded-xl backdrop-blur-sm shadow-lg">
+                         <div class="flex justify-between items-center">
+                            <span class="text-sm font-bold text-gray-600">社会评价</span>
+                        </div>
+                        <div class="mt-2 flex gap-1 text-orange-400 text-sm">
+                            <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star-half-stroke"></i>
+                        </div>
+                        <div class="text-xs text-gray-400 mt-1">社区居民对大学生志愿者的满意度</div>
+                    </div>
+                </div>
+                
+                <div class="animate-enter delay-200">
+                    <span class="text-orange-600 font-bold tracking-widest uppercase text-sm mb-2 block">场景二：社区志愿</span>
+                    <h2 class="text-4xl font-bold text-slate-800 mb-6">走出象牙塔<br>做生态文明的“宣讲员”</h2>
+                    <p class="text-gray-600 mb-8 text-lg">
+                        发挥青年学生知识层次高、沟通能力强的优势，协助解决社区基层治理中的环境难题。
+                    </p>
+                    <div class="flex flex-col gap-4">
+                        <div class="flex items-start gap-4 p-4 bg-white rounded-lg shadow-sm border-l-4 border-orange-500">
+                            <i class="fa-solid fa-trash-arrow-up text-orange-600 mt-1"></i>
+                            <div>
+                                <h4 class="font-bold text-gray-800">垃圾分类督导</h4>
+                                <p class="text-sm text-gray-500">利用课余时间在社区桶边指导，普及分类知识，提升分类准确率。</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4 p-4 bg-white rounded-lg shadow-sm border-l-4 border-orange-500">
+                            <i class="fa-solid fa-water text-orange-600 mt-1"></i>
+                            <div>
+                                <h4 class="font-bold text-gray-800">红树林与海岸线守护</h4>
+                                <p class="text-sm text-gray-500">依托深圳湾公园，开展常态化净滩行动与候鸟保护科普。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 8: 行动三（科技） -->
+        <section class="slide">
+            <div class="container mx-auto px-16 h-full grid grid-cols-2 gap-12 items-center">
+                <div class="animate-enter">
+                    <span class="text-blue-600 font-bold tracking-widest uppercase text-sm mb-2 block">场景三：科技赋能</span>
+                    <h2 class="text-4xl font-bold text-slate-800 mb-6">结合专业所长<br>以“智”促“绿”</h2>
+                    <p class="text-gray-600 mb-8 text-lg">
+                        将专业知识与生态建设结合，通过技术创新解决实际环境问题，体现深圳“科技之城”的特色。
+                    </p>
+                    <div class="flex flex-col gap-4">
+                        <div class="flex items-start gap-4 p-4 bg-white rounded-lg shadow-sm border-l-4 border-blue-500">
+                            <i class="fa-solid fa-mobile-screen text-blue-600 mt-1"></i>
+                            <div>
+                                <h4 class="font-bold text-gray-800">个人碳账户小程序</h4>
+                                <p class="text-sm text-gray-500">计算机学院学生开发：记录步行、无纸化阅读等行为，生成个人碳账单。</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4 p-4 bg-white rounded-lg shadow-sm border-l-4 border-blue-500">
+                            <i class="fa-solid fa-robot text-blue-600 mt-1"></i>
+                            <div>
+                                <h4 class="font-bold text-gray-800">环境监测黑科技</h4>
+                                <p class="text-sm text-gray-500">利用无人机搭载光谱仪巡查茅洲河水质；利用3D打印制作生态浮岛。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="h-96 bg-blue-100 rounded-2xl relative overflow-hidden flex items-center justify-center animate-enter delay-200">
+                    <i class="fa-solid fa-microchip text-9xl text-blue-200"></i>
+                    <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 border-2 border-blue-400 rounded-full animate-ping opacity-20"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 9: 创新成效 -->
+        <section class="slide">
+            <div class="container mx-auto px-16 h-full flex flex-col justify-center">
+                <h2 class="text-4xl font-bold text-slate-800 mb-10 text-center animate-enter">五、创新成效模拟</h2>
+                
+                <div class="grid grid-cols-3 gap-8 text-center animate-enter delay-100">
+                    <!-- Metric 1 -->
+                    <div class="glass-card p-10 rounded-2xl hover:bg-white transition-colors">
+                        <div class="text-5xl font-black text-emerald-600 mb-4 counter" data-target="180">0</div>
+                        <div class="text-xl font-bold text-gray-800 mb-2">万吨/年</div>
+                        <p class="text-gray-500 text-sm">若全市高校学生坚持每周少点一次外卖，预计减少塑料垃圾</p>
+                    </div>
+
+                    <!-- Metric 2 -->
+                    <div class="glass-card p-10 rounded-2xl hover:bg-white transition-colors border-emerald-500 border-2 scale-105 shadow-xl">
+                        <div class="text-5xl font-black text-blue-600 mb-4 counter" data-target="95">0</div>
+                        <div class="text-xl font-bold text-gray-800 mb-2">%</div>
+                        <p class="text-gray-500 text-sm">通过社区志愿服务督导，目标社区居民垃圾分类知晓率</p>
+                    </div>
+
+                    <!-- Metric 3 -->
+                    <div class="glass-card p-10 rounded-2xl hover:bg-white transition-colors">
+                        <div class="text-5xl font-black text-orange-600 mb-4 counter" data-target="3000">0</div>
+                        <div class="text-xl font-bold text-gray-800 mb-2">+</div>
+                        <p class="text-gray-500 text-sm">带动家庭数量：通过“小手拉大手”效应影响深圳家庭</p>
+                    </div>
+                </div>
+                <div class="text-center mt-12 text-gray-400 text-xs animate-enter delay-300">
+                    * 数据基于《2024深圳生态环境公报》及高校人数模型估算
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 10: 结语与呼吁 -->
+        <section class="slide">
+            <div class="text-center max-w-4xl mx-auto animate-enter">
+                <i class="fa-solid fa-quote-left text-4xl text-emerald-300 mb-6"></i>
+                <h2 class="text-3xl font-bold text-gray-800 leading-relaxed mb-8">
+                    生态文明建设是关系中华民族永续发展的根本大计。<br>
+                    深圳青年不仅是改革开放的见证者，<br>
+                    更应做<span class="text-emerald-600">绿色生活的践行者</span>、<span class="text-emerald-600">生态文明的推动者</span>。
+                </h2>
+                <i class="fa-solid fa-quote-right text-4xl text-emerald-300 mb-12"></i>
+                
+                <div class="bg-emerald-600 text-white py-6 px-12 rounded-2xl shadow-xl inline-block animate-pulse">
+                    <h3 class="text-2xl font-bold mb-2">我们的承诺</h3>
+                    <p class="text-emerald-100">从我做起，从现在做起，点亮深圳的每一抹绿！</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 11: 封底 -->
+        <section class="slide">
+            <div class="flex flex-col items-center justify-center animate-enter">
+                <h1 class="text-6xl font-black text-slate-800 mb-8">谢谢观看</h1>
+                <p class="text-xl text-gray-500 mb-12">欢迎批评指正</p>
+                
+                <button onclick="goToSlide(0)" class="px-8 py-3 rounded-full border-2 border-emerald-600 text-emerald-600 font-bold hover:bg-emerald-600 hover:text-white transition-colors">
+                    <i class="fa-solid fa-rotate-left mr-2"></i>重新播放
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 逻辑脚本 -->
+    <script>
+        const slides = document.querySelectorAll('.slide');
+        const progressBar = document.getElementById('progress');
+        const currentEl = document.getElementById('current-slide');
+        const totalEl = document.getElementById('total-slides');
+        const fsIcon = document.getElementById('fs-icon');
+        
+        let currentIndex = 0;
+        const totalSlides = slides.length;
+
+        // 初始化
+        totalEl.innerText = totalSlides;
+        updateSlide(0);
+
+        function goToSlide(index) {
+            currentIndex = index;
+            updateSlide(currentIndex);
+        }
+
+        function nextSlide() {
+            if (currentIndex < totalSlides - 1) {
+                currentIndex++;
+                updateSlide(currentIndex);
+            }
+        }
+
+        function prevSlide() {
+            if (currentIndex > 0) {
+                currentIndex--;
+                updateSlide(currentIndex);
+            }
+        }
+
+        function updateSlide(index) {
+            // 更新幻灯片状态
+            slides.forEach((slide, i) => {
+                slide.classList.remove('active', 'prev');
+                if (i === index) {
+                    slide.classList.add('active');
+                    // 触发数字动画（如果在该页有的话）
+                    triggerCounters(slide);
+                } else if (i < index) {
+                    slide.classList.add('prev');
+                }
+            });
+
+            // 更新进度条
+            const progress = ((index + 1) / totalSlides) * 100;
+            progressBar.style.width = `${progress}%`;
+            
+            // 更新页码
+            currentEl.innerText = index + 1;
+        }
+
+        // 数字增长动画
+        function triggerCounters(slide) {
+            const counters = slide.querySelectorAll('.counter');
+            counters.forEach(counter => {
+                const target = +counter.getAttribute('data-target');
+                const duration = 1500; // ms
+                const start = 0;
+                const startTime = performance.now();
+
+                const updateCount = (currentTime) => {
+                    const elapsed = currentTime - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    
+                    // Ease out quart
+                    const ease = 1 - Math.pow(1 - progress, 4);
+                    
+                    const current = Math.ceil(ease * target);
+                    counter.innerText = current;
+
+                    if (progress < 1) {
+                        requestAnimationFrame(updateCount);
+                    } else {
+                        counter.innerText = target; // Ensure exact final value
+                    }
+                };
+
+                requestAnimationFrame(updateCount);
+            });
+        }
+
+        // 全屏逻辑
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+                fsIcon.classList.remove('fa-expand');
+                fsIcon.classList.add('fa-compress');
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                    fsIcon.classList.remove('fa-compress');
+                    fsIcon.classList.add('fa-expand');
+                }
+            }
+        }
+
+        // 键盘监听
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.code === 'Space') {
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                prevSlide();
+            }
+        });
+    </script>
+</body>
+</html>
