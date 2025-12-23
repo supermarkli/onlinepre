@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>基于组合优化的全波形反演 (FWI) 观测系统设计</title>
+    <title>慢思考，快执行：基于 eBPF 的智能拥塞控制</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -13,9 +13,6 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=Inter:wght@300;400;600;700&display=swap"
         rel="stylesheet">
-
-    <!-- MathJax for LaTeX support -->
-    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 
     <style>
         body {
@@ -139,27 +136,30 @@
             opacity: 0.4;
         }
 
-        /* 图片占位符样式 */
-        .img-placeholder {
-            background-color: #e2e8f0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #94a3b8;
-            border-radius: 0.75rem;
-            position: relative;
-            overflow: hidden;
-            border: 2px dashed #cbd5e1;
-            transition: all 0.3s ease;
+        /* 表格样式适配 */
+        .custom-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 0.9rem;
         }
 
-        .img-placeholder:hover {
-            border-color: #10b981;
-            background-color: #f0fdf4;
-            color: #10b981;
+        .custom-table th {
+            text-align: left;
+            padding: 12px 16px;
+            border-bottom: 2px solid #e2e8f0;
+            color: #059669;
         }
 
-        /* 全屏时隐藏底部导航 */
+        .custom-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .custom-table tr:last-child td {
+            border-bottom: none;
+        }
+
         html:fullscreen #bottom-nav,
         html:fullscreen #progress-container {
             display: none !important;
@@ -169,7 +169,6 @@
 
 <body class="h-screen w-screen relative">
 
-    <!-- 底部控制栏 -->
     <div id="bottom-nav"
         class="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 flex flex-col items-center gap-2 w-full pointer-events-none">
         <div
@@ -181,7 +180,7 @@
             </button>
 
             <span class="text-sm font-mono text-gray-500 w-20 text-center select-none font-bold">
-                <span id="current-slide">1</span> / <span id="total-slides">13</span>
+                <span id="current-slide">1</span> / <span id="total-slides">8</span>
             </span>
 
             <button onclick="nextSlide()"
@@ -201,1328 +200,860 @@
         <div class="text-[10px] text-gray-400 font-mono opacity-60">← → 键切换</div>
     </div>
 
-    <div id="progress-container" class="fixed bottom-0 left-0 w-full h-1.5 bg-gray-200 z-50">
+    <div class="fixed bottom-0 left-0 w-full h-1.5 bg-gray-200 z-50">
         <div class="progress-bar" id="progress"></div>
     </div>
 
     <main id="presentation-container" class="w-full h-full relative overflow-hidden">
 
-        <!-- Slide 1: 封面 -->
         <section class="slide active">
-            <!-- 保持原有的背景装饰 -->
             <div class="blob bg-emerald-300 w-96 h-96 top-[-10%] right-[-10%]"></div>
             <div class="blob bg-blue-200 w-80 h-80 bottom-[-10%] left-[-10%]"></div>
 
             <div class="text-center max-w-5xl animate-enter">
                 <div
                     class="inline-block px-4 py-2 rounded-full bg-emerald-100 text-emerald-800 text-sm font-bold tracking-wider mb-6 shadow-sm border border-emerald-200">
-                    <i class="fa-solid fa-layer-group mr-2"></i>Combinatorial Optimization Project
+                    <i class="fa-solid fa-network-wired mr-2"></i>高级计算机网络 Project
                 </div>
-                <h1 class="text-4xl md:text-6xl font-black text-slate-800 leading-tight mb-4 tracking-tight">
-                    基于组合优化的<br>
-                    全波反演 (FWI) 观测系统设计
+                <h1 class="text-5xl md:text-7xl font-black text-slate-800 leading-tight mb-4 tracking-tight">
+                    慢思考，快执行<br>
+                    <span
+                        class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-500 font-['Inter']">Slow-Thinking,
+                        Fast-Acting</span>
                 </h1>
-                <p class="text-xl text-emerald-700 font-bold mb-10 tracking-wide mt-6">
-                    —— 利用惰性贪心策略寻找最优震源布局
+                <p class="text-xl text-emerald-700 font-bold mb-10 tracking-wide">
+                    —— 基于 eBPF 的异步智能拥塞控制架构
                 </p>
 
-                <!-- 信息卡片 -->
                 <div
-                    class="grid grid-cols-3 gap-4 text-center max-w-2xl mx-auto text-sm text-gray-600 bg-white/50 p-6 rounded-xl border border-gray-100 delay-200 animate-enter">
+                    class="grid grid-cols-1 gap-8 text-center max-w-xs mx-auto text-sm text-gray-600 bg-white/50 p-6 rounded-xl border border-gray-100 delay-200 animate-enter">
                     <div>
                         <p class="text-xs text-gray-400 uppercase">汇报人</p>
-                        <p class="font-bold text-gray-800 text-lg mt-1"><i
-                                class="fa-solid fa-user text-emerald-500 mr-2"></i>高博 李子豪</p>
-                    </div>
-                    <div class="border-l border-gray-200">
-                        <p class="text-xs text-gray-400 uppercase">课程</p>
-                        <p class="font-bold text-gray-800 text-lg mt-1">组合优化</p>
-                    </div>
-                    <div class="border-l border-gray-200">
-                        <p class="text-xs text-gray-400 uppercase">日期</p>
-                        <p class="font-bold text-gray-800 text-lg mt-1 font-mono">2025.12.17</p>
+                        <p class="font-bold text-gray-800 text-lg flex justify-center items-center gap-2">
+                            <i class="fa-solid fa-user-circle text-emerald-500"></i> 李子豪
+                        </p>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- Slide 2: 问题背景 (Refactored) -->
-        <section class="slide">
-            <div class="container mx-auto px-12 h-full flex flex-col justify-center">
-                <!-- Header -->
-                <div class="mb-10 animate-enter text-center">
-                    <h2 class="text-4xl font-bold text-slate-800 mb-3">01 问题背景 (Motivation)</h2>
-                    <p class="text-gray-500 text-lg">从全波形反演 (FWI) 的成本瓶颈到组合优化问题</p>
-                </div>
-
-                <div class="grid grid-cols-3 gap-8 h-auto items-stretch">
-
-                    <!-- 1. Context: FWI Value -->
-                    <div
-                        class="glass-card p-6 rounded-2xl border-t-4 border-emerald-500 animate-enter delay-100 flex flex-col relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300">
-                        <div class="absolute -right-4 -top-4 w-24 h-24 bg-emerald-50 rounded-full z-0"></div>
-                        <div class="z-10 relative">
-                            <div
-                                class="w-12 h-12 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl mb-4">
-                                <i class="fa-solid fa-earth-americas"></i>
-                            </div>
-                            <h3 class="text-xl font-bold text-slate-800 mb-2">全波形反演 (FWI)</h3>
-                            <p class="text-sm text-slate-500 font-bold mb-4 uppercase tracking-wider">High Precision
-                                Imaging</p>
-                            <p class="text-slate-600 leading-relaxed text-sm mb-4 flex-grow">
-                                利用完整的地震波形信息重建地下精细速度模型，是目前精度最高的成像技术之一。
-                            </p>
-                            <div class="bg-emerald-50/50 rounded-lg p-3 border border-emerald-100">
-                                <div class="flex items-center gap-2 text-sm text-emerald-800 font-bold">
-                                    <i class="fa-solid fa-check-circle"></i> 优势
-                                </div>
-                                <p class="text-xs text-emerald-700 mt-1">清晰刻画复杂地质构造与岩性变化。</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 2. Conflict: The Bottleneck -->
-                    <div
-                        class="glass-card p-6 rounded-2xl border-t-4 border-red-500 animate-enter delay-200 flex flex-col relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300">
-                        <div class="absolute -right-4 -top-4 w-24 h-24 bg-red-50 rounded-full z-0"></div>
-                        <div class="z-10 relative">
-                            <div
-                                class="w-12 h-12 rounded-lg bg-red-100 text-red-600 flex items-center justify-center text-xl mb-4">
-                                <i class="fa-solid fa-hand-holding-dollar"></i>
-                            </div>
-                            <h3 class="text-xl font-bold text-slate-800 mb-2">采集成本瓶颈</h3>
-                            <p class="text-sm text-slate-500 font-bold mb-4 uppercase tracking-wider">Cost vs. Accuracy
-                            </p>
-
-                            <div class="space-y-4 flex-grow">
-                                <!-- Ideal -->
-                                <div class="relative pl-4 border-l-2 border-gray-200">
-                                    <h4 class="text-xs text-gray-400 uppercase font-bold">Ideal</h4>
-                                    <p class="text-sm text-slate-600">密集采集 <i
-                                            class="fa-solid fa-arrow-right text-gray-400 mx-1"></i> 完美成像</p>
-                                </div>
-                                <!-- Reality -->
-                                <div class="relative pl-4 border-l-2 border-red-400">
-                                    <h4 class="text-xs text-red-500 uppercase font-bold">Reality</h4>
-                                    <p class="text-sm text-slate-700 font-bold">资源受限</p>
-                                    <p class="text-xs text-slate-500 mt-1">海上节点/震源部署极其昂贵且耗时。</p>
-                                </div>
-                            </div>
-
-                            <div class="mt-4 bg-red-50 rounded-lg p-3 text-center border border-red-100">
-                                <span class="text-red-700 font-bold text-sm">无法全覆盖观测</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 3. Goal: Optimization -->
-                    <div
-                        class="glass-card p-6 rounded-2xl border-t-4 border-indigo-500 animate-enter delay-300 flex flex-col relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300">
-                        <div class="absolute -right-4 -top-4 w-24 h-24 bg-indigo-50 rounded-full z-0"></div>
-                        <div class="z-10 relative h-full flex flex-col">
-                            <div
-                                class="w-12 h-12 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl mb-4">
-                                <i class="fa-solid fa-bullseye"></i>
-                            </div>
-                            <h3 class="text-xl font-bold text-slate-800 mb-2">观测系统设计</h3>
-                            <p class="text-sm text-slate-500 font-bold mb-4 uppercase tracking-wider">The Solution</p>
-
-                            <p class="text-slate-600 leading-relaxed text-sm mb-6">
-                                在预算约束下，智能优选最具价值的观测位置。
-                            </p>
-
-                            <!-- N -> K Visual -->
-                            <div class="mt-auto bg-white/60 rounded-xl p-4 border border-indigo-100">
-                                <div class="flex items-center justify-between text-center mb-2">
-                                    <div>
-                                        <div class="text-xl font-black text-slate-300">N</div>
-                                        <div class="text-[10px] text-slate-400 uppercase">Candidates</div>
-                                    </div>
-                                    <i class="fa-solid fa-filter text-indigo-400"></i>
-                                    <div>
-                                        <div class="text-xl font-black text-emerald-600">K</div>
-                                        <div class="text-[10px] text-emerald-600 font-bold uppercase">Optimal</div>
-                                    </div>
-                                </div>
-                                <div class="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
-                                    <div class="bg-indigo-500 h-full w-[20%]"></div>
-                                </div>
-                                <p class="text-center text-[10px] text-slate-400 mt-2">K ≪ N (Sparse Design)</p>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-
-                <!-- Bottom Summary Sentence -->
-                <div class="mt-10 text-center animate-enter delay-400">
-                    <p class="text-slate-600 text-lg font-light">
-                        <i class="fa-solid fa-quote-left text-slate-300 mr-2"></i>
-                        核心问题：如何在 <span class="font-bold text-indigo-600">有限预算 (K)</span> 下，最大化 <span
-                            class="font-bold text-emerald-600">成像质量</span>？
-                        <i class="fa-solid fa-quote-right text-slate-300 ml-2"></i>
-                    </p>
-                </div>
-            </div>
-        </section>
-
-        <!-- Slide 3: 数学建模 (Refactored) -->
         <section class="slide">
             <div class="container mx-auto px-16 h-full flex flex-col justify-center">
-                <div class="mb-10 animate-enter text-center">
-                    <h2 class="text-4xl font-bold text-slate-800 mb-3">02 数学建模 (Problem Formulation)</h2>
-                    <p class="text-gray-500 text-lg">将观测系统设计转化为整数规划问题</p>
+                <div class="mb-10 animate-enter">
+                    <h2 class="text-4xl font-bold text-slate-800 mb-2">01 背景：eBPF 核心机制 (Background)</h2>
                 </div>
 
-                <!-- Main Content Wrapper -->
-                <div class="flex flex-col gap-8">
+                <div class="grid grid-cols-12 gap-10 items-center h-auto">
 
-                    <!-- Formula Section (Central & Prominent) -->
-                    <div
-                        class="glass-card p-10 rounded-2xl border-t-4 border-emerald-500 shadow-lg animate-enter delay-100 relative overflow-hidden group">
-                        <!-- Decorative background elements -->
-                        <div
-                            class="absolute -right-10 -top-10 text-9xl text-emerald-50 opacity-20 font-serif italic pointer-events-none select-none">
-                            f(x)</div>
-                        <div class="blob bg-emerald-100 w-64 h-64 bottom-[-20%] left-[-10%] opacity-20"></div>
-
-                        <div class="flex flex-col items-center justify-center relative z-10">
-                            <!-- Objective -->
+                    <div class="col-span-5 animate-enter delay-100">
+                        <div class="relative z-10">
                             <div
-                                class="bg-white/80 backdrop-blur-md px-14 py-8 rounded-2xl border border-emerald-100 shadow-md mb-8 transform group-hover:scale-105 transition-transform duration-300">
-                                <span
-                                    class="text-3xl md:text-5xl font-serif text-slate-800 leading-relaxed tracking-wide">
-                                    <span class="font-bold text-emerald-700">max</span>
-                                    <sub class="text-lg text-gray-400 font-sans mx-2 italic">w</sub>
-                                    <span class="italic font-medium">log det</span>
-                                    <span class="text-slate-400 mx-1">(</span>
-                                    <span class="inline-block relative">
-                                        &sum;<sub class="text-sm absolute -bottom-2 -right-1 text-gray-400">i</sub>
-                                        <span class="text-blue-600 font-bold mx-1">w<sub>i</sub></span>
-                                        <span class="text-amber-600 font-bold">F<sub>i</sub></span>
-                                    </span>
-                                    <span class="text-gray-300 mx-2">+</span>
-                                    <span class="text-gray-400">&epsilon;I</span>
-                                    <span class="text-slate-400 mx-1">)</span>
-                                </span>
+                                class="absolute -top-10 -left-10 w-32 h-32 bg-emerald-100 rounded-full blur-2xl opacity-60 -z-10">
                             </div>
 
-                            <!-- Constraints Line -->
-                            <div
-                                class="flex items-center gap-10 text-lg text-slate-600 font-mono bg-slate-50/80 px-8 py-3 rounded-full border border-slate-200">
-                                <div class="flex items-center gap-3">
-                                    <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Subject
-                                        to</span>
-                                </div>
-                                <div class="w-px h-6 bg-gray-300"></div>
-                                <div>
-                                    &sum; w<sub>i</sub> = <span class="text-purple-600 font-bold">K</span>
-                                </div>
-                                <div class="w-px h-6 bg-gray-300"></div>
-                                <div>
-                                    w<sub>i</sub> &in; {0, 1}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Variable Explanations Grid -->
-                    <div class="grid grid-cols-4 gap-6 animate-enter delay-200">
-
-                        <!-- Variable: w -->
-                        <div
-                            class="glass-card p-5 rounded-xl border-l-4 border-blue-500 hover:bg-white/90 transition-colors group">
-                            <div class="flex items-center gap-3 mb-3">
-                                <div
-                                    class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 font-bold font-mono text-xl group-hover:scale-110 transition-transform">
-                                    w</div>
-                                <div class="text-sm font-bold text-slate-700">决策变量</div>
-                            </div>
-                            <p class="text-xs text-slate-500 leading-relaxed">
-                                二值选择向量。<br>
-                                <span class="text-blue-600 font-bold bg-blue-50 px-1 rounded">1</span> : 选中该位置<br>
-                                <span class="text-slate-400 font-bold bg-gray-50 px-1 rounded">0</span> : 舍弃
-                            </p>
-                        </div>
-
-                        <!-- Variable: F -->
-                        <div
-                            class="glass-card p-5 rounded-xl border-l-4 border-amber-500 hover:bg-white/90 transition-colors group">
-                            <div class="flex items-center gap-3 mb-3">
-                                <div
-                                    class="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600 font-bold font-serif text-xl group-hover:scale-110 transition-transform">
-                                    F<sub>i</sub></div>
-                                <div class="text-sm font-bold text-slate-700">信息矩阵</div>
-                            </div>
-                            <p class="text-xs text-slate-500 leading-relaxed">
-                                候选点 <span class="font-mono">i</span> 的<br>
-                                <span class="font-bold text-amber-700">Fisher Information Matrix</span>。<br>
-                                量化该点提供的梯度信息。
-                            </p>
-                        </div>
-
-                        <!-- Variable: K -->
-                        <div
-                            class="glass-card p-5 rounded-xl border-l-4 border-purple-500 hover:bg-white/90 transition-colors group">
-                            <div class="flex items-center gap-3 mb-3">
-                                <div
-                                    class="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center text-purple-600 font-bold font-mono text-xl group-hover:scale-110 transition-transform">
-                                    K</div>
-                                <div class="text-sm font-bold text-slate-700">预算约束</div>
-                            </div>
-                            <p class="text-xs text-slate-500 leading-relaxed">
-                                允许选择的最大震源数量。<br>
-                                强制稀疏性约束 <span class="font-mono bg-purple-50 px-1 rounded text-purple-700">K ≪ N</span>。
-                            </p>
-                        </div>
-
-                        <!-- Variable: Objective -->
-                        <div
-                            class="glass-card p-5 rounded-xl border-l-4 border-emerald-500 hover:bg-white/90 transition-colors group">
-                            <div class="flex items-center gap-3 mb-3">
-                                <div
-                                    class="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 font-bold text-lg group-hover:scale-110 transition-transform">
-                                    <i class="fa-solid fa-arrow-trend-up"></i>
-                                </div>
-                                <div class="text-sm font-bold text-slate-700">优化目标</div>
-                            </div>
-                            <p class="text-xs text-slate-500 leading-relaxed">
-                                <span class="font-bold text-emerald-700">D-Optimality</span><br>
-                                最大化行列式 = 对地下结构推理的误差最小。
-                            </p>
-                        </div>
-
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Slide 4: 问题的核心性质 (Refactored) -->
-        <section class="slide">
-            <div class="container mx-auto px-16 h-full flex flex-col justify-center">
-                <div class="mb-10 animate-enter text-center">
-                    <h2 class="text-4xl font-bold text-slate-800 mb-3">03 问题的核心性质与设计理念<br> (Submodularity and Design)
-                    </h2>
-                    <p class="text-gray-500 text-lg">子模性：破解组合爆炸的关键钥匙</p>
-                </div>
-
-                <div class="grid grid-cols-12 gap-8 items-stretch">
-
-                    <!-- Left: The Challenge (Hard Problem) -->
-                    <div class="col-span-4 animate-enter delay-100 flex flex-col">
-                        <div
-                            class="glass-card p-8 rounded-2xl border-l-4 border-red-500 bg-red-50/30 h-full flex flex-col justify-between relative overflow-hidden group">
-                            <!-- Background Decoration -->
-                            <div
-                                class="absolute -right-6 -bottom-6 text-red-100/80 text-9xl group-hover:scale-110 transition-transform duration-500">
-                                <i class="fa-solid fa-bomb"></i>
-                            </div>
-
-                            <div>
-                                <h3 class="text-xl font-bold text-red-800 mb-6 flex items-center">
-                                    <div
-                                        class="w-8 h-8 rounded bg-red-100 flex items-center justify-center mr-3 text-red-500">
-                                        <i class="fa-solid fa-triangle-exclamation"></i>
-                                    </div>
-                                    基于复杂度的考量
-                                </h3>
-
-                                <p class="text-slate-700 font-bold text-lg mb-2">NP-Hard 组合优化问题</p>
-                                <p class="text-slate-600 text-sm leading-relaxed mb-6">
-                                    从 N 个候选点中选择 K 个，解空间呈爆炸式增长，穷举法完全失效。
-                                </p>
-                                <p class="text-slate-600 text-sm leading-relaxed mb-2">
-                                    <span class="font-bold">决策：</span> 必须寻求<span class="font-bold">近似算法 (Approximation
-                                        Algorithm)</span>以在多项式时间内获得可行解。
-                                </p>
-                            </div>
-
-                            <div
-                                class="bg-white/80 p-5 rounded-xl text-center border border-red-100 shadow-sm relative z-10">
-                                <p class="text-[10px] text-red-400 uppercase font-bold tracking-widest mb-2">Search
-                                    Space Size</p>
-                                <span class="text-4xl font-serif font-bold text-slate-800">
-                                    \(\binom{N}{K}\)
-                                </span>
-                                <p class="text-xs text-red-500 font-bold mt-2">Exponential Growth</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Right: The Breakthrough (Submodularity) -->
-                    <div class="col-span-8 animate-enter delay-200 flex flex-col gap-6">
-
-                        <!-- Top: Definition & Diminishing Returns -->
-                        <div class="glass-card p-8 rounded-2xl border-l-4 border-emerald-500 relative overflow-hidden">
-                            <div class="absolute top-0 right-0 p-6 opacity-10 text-emerald-800 text-8xl"><i
-                                    class="fa-solid fa-layer-group"></i></div>
-
-                            <h3 class="text-xl font-bold text-emerald-800 mb-6 flex items-center">
-                                <div
-                                    class="w-8 h-8 rounded bg-emerald-100 flex items-center justify-center mr-3 text-emerald-500">
-                                    <i class="fa-solid fa-key"></i>
-                                </div>
-                                基于问题结构的利用：子模性
+                            <h3 class="text-3xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+                                <i class="fa-solid fa-microchip text-emerald-500"></i>
+                                <span class="border-b-4 border-emerald-200/50 pb-1">什么是 eBPF？(What is eBPF?)</span>
                             </h3>
 
-                            <div class="grid grid-cols-2 gap-8">
-                                <div>
-                                    <div class="bg-emerald-50/50 p-4 rounded-lg border border-emerald-100 mb-4">
-                                        <p class="text-xs text-emerald-600 font-bold uppercase mb-1">Target Function</p>
-                                        <p class="font-serif text-lg text-slate-800">
-                                            \( f(S) = \log \det (\mathbf{F}_S) \)
-                                        </p>
-                                    </div>
-                                    <p class="text-sm text-slate-600 leading-relaxed">
-                                        目标函数被证明是<span class="font-bold text-emerald-700">单调子模函数</span> (Monotone
-                                        Submodular Function)。
-                                        </p>
-                                        <p class="text-sm text-slate-600 leading-relaxed mt-1">
-                                            <span class="font-bold">决策：</span> 这种特定结构是使用<span class="font-bold">贪心算法</span>的最佳场景。
-                                    </p>
-                                </div>
-
-                                <!-- Diminishing Returns Visualization -->
-                                <div class="bg-white/40 p-4 rounded-xl border border-white/60">
-                                    <h4 class="font-bold text-slate-700 text-xs mb-3 flex items-center">
-                                        <i class="fa-solid fa-chart-simple mr-2 text-emerald-500"></i>
-                                        收益递减 (Diminishing Returns)
-                                    </h4>
-                                    <!-- Simple bar chart CSS -->
-                                    <div class="flex items-end gap-1 h-20 border-b border-gray-300 pb-0.5 px-2">
-                                        <div class="w-1/6 bg-emerald-400 h-[90%] rounded-t opacity-100"></div>
-                                        <div class="w-1/6 bg-emerald-400 h-[65%] rounded-t opacity-90"></div>
-                                        <div class="w-1/6 bg-emerald-400 h-[45%] rounded-t opacity-80"></div>
-                                        <div class="w-1/6 bg-emerald-400 h-[30%] rounded-t opacity-70"></div>
-                                        <div class="w-1/6 bg-emerald-400 h-[18%] rounded-t opacity-60"></div>
-                                        <div class="w-1/6 bg-emerald-400 h-[10%] rounded-t opacity-50"></div>
-                                    </div>
-                                    <p class="text-[10px] text-slate-500 mt-2 leading-tight">
-                                        随着震源数量增加，新震源带来的边际信息增益逐渐减少。
-                                    </p>
-                                </div>
+                            <div class="text-gray-600 text-lg leading-loose text-justify mb-8">
+                                eBPF 是一种革命性的内核技术，允许在<span
+                                    class="font-bold text-emerald-700 bg-emerald-50 px-1 mx-1 rounded">不修改源码</span>的情况下，将沙箱化的用户程序挂载到内核执行路径中。
                             </div>
-                        </div>
 
-                        <!-- Bottom: Significance -->
-                        <div
-                            class="glass-card p-6 rounded-2xl border-l-4 border-amber-500 bg-amber-50/30 flex items-center justify-between">
-                            <div class="flex items-center gap-4">
+                            <div
+                                class="bg-white/60 backdrop-blur-md border border-slate-200 p-5 rounded-xl shadow-sm flex gap-4">
                                 <div
-                                    class="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-xl shrink-0">
-                                    <i class="fa-solid fa-lightbulb"></i>
+                                    class="shrink-0 w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+                                    <i class="fa-solid fa-circle-info"></i>
                                 </div>
                                 <div>
-                                    <h4 class="font-bold text-slate-800 mb-1">算法选择</h4>
-                                    <p class="text-sm text-slate-600">
-                                        我们最终选择<span class="font-bold text-amber-700">惰性贪心算法</span>，子模性保证了贪心算法的高效性，并提供了<span class="font-bold text-amber-700">理论最优下界</span>。
+                                    <h4 class="font-bold text-slate-700 text-sm mb-1">拥塞控制 (Context)</h4>
+                                    <p class="text-xs text-slate-500 leading-relaxed">
+                                        传统 TCP 算法依赖内核模块硬编码，eBPF 为其赋予了动态可编程性，是实现“慢思考”架构的基石。
                                     </p>
                                 </div>
                             </div>
-                            <div class="text-2xl font-bold text-amber-600/20">
-                                <i class="fa-solid fa-certificate"></i>
+                        </div>
+                    </div>
+
+                    <div class="col-span-7 animate-enter delay-200">
+                        <div class="bg-white/40 backdrop-blur-sm rounded-3xl p-6 border border-white/50 shadow-sm">
+                            <div class="grid grid-cols-2 gap-5">
+                                <div
+                                    class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-emerald-400 hover:-translate-y-1 transition-transform duration-300">
+                                    <div class="flex items-center gap-3 text-slate-800 font-bold text-lg mb-2">
+                                        <i class="fa-solid fa-link text-emerald-500"></i> 挂载点 Hooks
+                                    </div>
+                                    <p class="text-xs text-slate-500 leading-relaxed">
+                                        <span class="font-semibold text-emerald-600">挂载点</span><br>
+                                        像“血管夹”一样，在 TC, XDP 等关键路径精准拦截流量。
+                                    </p>
+                                </div>
+
+                                <div
+                                    class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-400 hover:-translate-y-1 transition-transform duration-300">
+                                    <div class="flex items-center gap-3 text-slate-800 font-bold text-lg mb-2">
+                                        <i class="fa-solid fa-shield-check text-blue-500"></i> 验证器 Verifier
+                                    </div>
+                                    <p class="text-xs text-slate-500 leading-relaxed">
+                                        <span class="font-semibold text-blue-600">验证器</span><br>
+                                        内核的“门卫”，确保程序无死循环、无越界，保障 OS 绝对安全。
+                                    </p>
+                                </div>
+
+                                <div
+                                    class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-amber-400 hover:-translate-y-1 transition-transform duration-300">
+                                    <div class="flex items-center gap-3 text-slate-800 font-bold text-lg mb-2">
+                                        <i class="fa-solid fa-table-cells-large text-amber-500"></i> 状态存储 Maps
+                                    </div>
+                                    <p class="text-xs text-slate-500 leading-relaxed">
+                                        <span class="font-semibold text-amber-600">状态存储</span><br>
+                                        跨越内核/用户态的高效 Key-Value 存储，数据交互的桥梁。
+                                    </p>
+                                </div>
+
+                                <div
+                                    class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-purple-400 hover:-translate-y-1 transition-transform duration-300">
+                                    <div class="flex items-center gap-3 text-slate-800 font-bold text-lg mb-2">
+                                        <i class="fa-solid fa-wand-magic-sparkles text-purple-500"></i> 辅助函数 Helpers
+                                    </div>
+                                    <p class="text-xs text-slate-500 leading-relaxed">
+                                        <span class="font-semibold text-purple-600">辅助函数</span><br>
+                                        白名单能力接口，提供获取时间、修改包头等原子操作。
+                                    </p>
+                                </div>
                             </div>
                         </div>
-
                     </div>
+
                 </div>
             </div>
         </section>
-        <!-- Slide 5: 证明NP-Hard问题 -->
+
         <section class="slide">
-            <div class="container mx-auto px-8 md:px-16 h-full flex flex-col justify-center">
-                <div class="mb-8 animate-enter text-center">
-                    <h2 class="text-3xl md:text-4xl font-bold text-slate-800 mb-2">04 问题规约 (Problem Reduction)</h2>
-                    <p class="text-gray-500 text-base md:text-lg">从物理光照到最大覆盖问题：揭示计算复杂度的根源</p>
+            <div class="container mx-auto px-16 h-full flex flex-col justify-center">
+                <div class="mb-8 animate-enter">
+                    <h2 class="text-4xl font-bold text-slate-800 mb-2">02 现状：eBPF 与 ICC 生态 (Landscape)</h2>
                 </div>
 
-                <div class="flex flex-col gap-6">
+                <div class="flex flex-col gap-6 h-auto">
 
-                    <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-stretch relative">
+                    <div class="grid grid-cols-12 gap-6 flex-1">
 
-                        <div class="md:col-span-5 h-full animate-enter delay-100">
+                        <div class="col-span-5 animate-enter delay-100">
                             <div
-                                class="glass-card h-full p-6 rounded-2xl border-t-4 border-blue-500 flex flex-col hover:shadow-lg transition-shadow duration-300 bg-white/60">
-                                <div class="flex items-center gap-3 mb-5 border-b border-blue-100 pb-3">
-                                    <div
-                                        class="w-10 h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center text-lg shrink-0">
-                                        <i class="fa-solid fa-earth-americas"></i>
-                                    </div>
-                                    <div>
-                                        <h3 class="text-lg font-bold text-slate-800 leading-tight">物理世界 (Physics)</h3>
-                                        <p class="text-[10px] text-blue-500 font-bold uppercase tracking-wider">Seismic
-                                            Illumination</p>
-                                    </div>
-                                </div>
+                                class="glass-card p-8 rounded-2xl h-full border-t-4 border-blue-500 flex flex-col relative overflow-hidden group justify-between">
 
-                                <div class="space-y-5 flex-grow">
-                                    <div class="flex gap-3 items-start">
-                                        <span
-                                            class="text-xs font-bold text-blue-600 uppercase w-12 shrink-0 pt-1 text-right">全空间</span>
-                                        <p class="text-sm text-slate-600 leading-snug">
-                                            地下所有的网格点
-                                        </p>
-                                    </div>
-                                    <div class="flex gap-3 items-start">
-                                        <span
-                                            class="text-xs font-bold text-blue-600 uppercase w-12 shrink-0 pt-1 text-right">单震源</span>
-                                        <p class="text-sm text-slate-600 leading-snug">
-                                            第 <span class="font-serif italic font-bold text-slate-800">i</span>
-                                            个震源激发的波场能有效“照亮”的区域。
-                                        </p>
-                                    </div>
-                                    <div class="flex gap-3 items-start">
-                                        <span
-                                            class="text-xs font-bold text-blue-600 uppercase w-12 shrink-0 pt-1 text-right">目
-                                            标</span>
-                                        <p class="text-sm text-slate-600 leading-snug">
-                                            在有限震源数下，尽可能覆盖更多的地下网格。
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div
-                            class="md:col-span-2 flex flex-col justify-center items-center py-4 md:py-0 animate-enter delay-300 z-10 relative">
-                            <div class="absolute w-full h-px bg-slate-200 top-1/2 left-0 -z-10 hidden md:block"></div>
-
-                            <div
-                                class="bg-white p-3 rounded-full shadow-lg border border-slate-200 flex flex-col items-center justify-center w-16 h-16 group hover:scale-110 transition-transform duration-300">
-                                <span
-                                    class="text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Map</span>
                                 <i
-                                    class="fa-solid fa-arrow-right-arrow-left text-slate-500 text-xl group-hover:text-indigo-500 transition-colors"></i>
-                            </div>
-                        </div>
-
-                        <div class="md:col-span-5 h-full animate-enter delay-200">
-                            <div
-                                class="glass-card h-full p-6 rounded-2xl border-t-4 border-purple-500 flex flex-col hover:shadow-lg transition-shadow duration-300 bg-white/60">
-                                <div class="flex items-center gap-3 mb-5 border-b border-purple-100 pb-3">
-                                    <div
-                                        class="w-10 h-10 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center text-lg shrink-0">
-                                        <i class="fa-solid fa-calculator"></i>
-                                    </div>
-                                    <div>
-                                        <h3 class="text-lg font-bold text-slate-800 leading-tight">数学抽象 (Set Theory)
-                                        </h3>
-                                        <p class="text-[10px] text-purple-500 font-bold uppercase tracking-wider">Max
-                                            Coverage Problem</p>
-                                    </div>
-                                </div>
-
-                                <div class="space-y-5 flex-grow">
-                                    <div class="flex gap-3 items-start">
-                                        <div class="w-12 shrink-0 text-right pt-0.5">
-                                            <span class="font-serif italic font-bold text-slate-800 text-lg">U</span>
-                                        </div>
-                                        <p class="text-sm text-slate-600 leading-snug">
-                                            全集 (Universe) <br><span class="text-slate-400 text-xs">Elements = Grid
-                                                Points</span>
-                                        </p>
-                                    </div>
-                                    <div class="flex gap-3 items-start">
-                                        <div class="w-12 shrink-0 text-right pt-0.5">
-                                            <span
-                                                class="font-serif italic font-bold text-purple-600 text-lg">S<sub>i</sub></span>
-                                        </div>
-                                        <p class="text-sm text-slate-600 leading-snug">
-                                            子集 (Subset) <br><span class="text-slate-400 text-xs">Subset associated with
-                                                Source <span class="font-serif italic">i</span></span>
-                                        </p>
-                                    </div>
-
-                                    <div
-                                        class="mt-4 bg-purple-50/60 rounded-xl py-4 border border-purple-100 flex justify-center items-center">
-
-                                        <div class="font-serif text-slate-800 flex items-center gap-4">
-
-                                            <span class="text-xl italic">max</span>
-
-                                            <div class="flex items-center gap-1">
-                                                <span class="text-4xl font-light text-slate-400 scale-y-110">|</span>
-
-                                                <div class="flex flex-col items-center justify-center mx-1">
-                                                    <span
-                                                        class="text-2xl leading-none font-sans text-slate-700">&cup;</span>
-                                                    <span class="text-[10px] text-slate-500 italic font-serif -mt-0.5">i
-                                                        &in; S</span>
-                                                </div>
-
-                                                <span
-                                                    class="text-2xl font-bold text-purple-700 italic">S<sub>i</sub></span>
-
-                                                <span class="text-4xl font-light text-slate-400 scale-y-110">|</span>
-                                            </div>
-
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="animate-enter delay-400 mt-2">
-                        <div
-                            class="bg-gradient-to-r from-red-50 to-white rounded-xl p-4 border border-red-100 flex flex-col md:flex-row items-center gap-6 shadow-sm">
-                            <div
-                                class="flex flex-row md:flex-col items-center gap-3 md:gap-1 px-4 md:border-r border-red-100 shrink-0">
-                                <div class="text-2xl text-red-500"><i class="fa-solid fa-gavel"></i></div>
-                                <div class="text-[10px] font-bold text-red-400 uppercase tracking-widest">Verdict</div>
-                            </div>
-
-                            <div class="flex-grow text-center md:text-left">
-                                <h4 class="text-red-900 font-bold text-base mb-1">为什么这是 NP-Hard 问题？</h4>
-                                <p class="text-slate-600 text-sm leading-relaxed">
-                                    这是一个经典的归约证明：<span class="font-bold text-slate-800">最大覆盖问题 (MCP)</span> 已知是 NP-Hard
-                                    的。
-                                    我们的问题在特例下等价于 MCP，因此其通用形式必然也是 NP-Hard。
-                                </p>
-                            </div>
-
-                            <div class="shrink-0">
+                                    class="fa-solid fa-server absolute -bottom-8 -right-8 text-[150px] text-blue-50 opacity-60 z-0 pointer-events-none"></i>
                                 <div
-                                    class="bg-white px-6 py-2 rounded-lg border border-red-200 shadow-sm text-center min-w-[120px]">
-                                    <span
-                                        class="block text-[10px] text-slate-400 uppercase font-bold mb-0.5">Complexity</span>
-                                    <span class="block text-xl font-black text-red-600 tracking-tight">NP-Hard</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-        </section>
-
-        <!-- Slide 6: 求解算法 (Lazy Greedy Logic) -->
-        <section class="slide">
-            <div class="container mx-auto px-12 h-full flex flex-col justify-center">
-                <div class="mb-8 animate-enter text-center">
-                    <h2 class="text-4xl font-bold text-slate-800 mb-2">05 求解算法 (Lazy Greedy)</h2>
-                    <p class="text-gray-500 text-lg">利用边际增益递减特性实现极速求解</p>
-                </div>
-
-                <div class="grid grid-cols-12 gap-10 h-auto items-center">
-
-                    <!-- Left: Mac Style Code Block (Light Theme) -->
-                    <div class="col-span-6 animate-enter delay-100">
-                        <div
-                            class="glass-card p-0 rounded-xl border border-gray-200 overflow-hidden shadow-xl bg-white">
-                            <!-- Title Bar -->
-                            <div
-                                class="bg-gray-100 px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-                                <div class="flex gap-2">
-                                    <div class="w-3 h-3 rounded-full bg-[#ff5f56] border border-[#e0443e]"></div>
-                                    <div class="w-3 h-3 rounded-full bg-[#ffbd2e] border border-[#dea123]"></div>
-                                    <div class="w-3 h-3 rounded-full bg-[#27c93f] border border-[#1aab29]"></div>
-                                </div>
-                                <span class="text-xs font-mono text-gray-500 font-bold">lazy_greedy.py</span>
-                                <div class="w-10"></div> <!-- Spacer -->
-                            </div>
-
-                            <!-- Code -->
-                            <div
-                                class="p-6 font-mono text-xs md:text-sm leading-relaxed text-slate-800 overflow-x-auto bg-white">
-                                <pre><code><span class="text-purple-600 font-bold">while</span> <span class="text-slate-500">len</span>(selected) < <span class="text-emerald-600 font-bold">K</span>:
-    <span class="text-slate-400 italic"># 1. 取出期望值最高的候选点 (Max-Heap)</span>
-    candidate = queue.pop_top() 
-    
-    <span class="text-purple-600 font-bold">if</span> candidate.is_stale:
-        <span class="text-slate-400 italic"># 2. 重新计算真实增益 (昂贵操作)</span>
-        candidate.gain = recompute(candidate)
-        candidate.is_stale = <span class="text-blue-600 font-bold">False</span>
-        
-        <span class="text-slate-400 italic"># 3. Look Ahead 检查</span>
-        top_of_queue = queue.peek() 
-        
-        <span class="text-purple-600 font-bold">if</span> candidate.gain >= top_of_queue.gain:
-            <span class="text-slate-400 italic"># 即使重算也是第一 -> 选中</span>
-            select(candidate)
-        <span class="text-purple-600 font-bold">else</span>:
-            <span class="text-slate-400 italic"># 比第二名的上限还小 -> 放回队列重排</span>
-            queue.push(candidate) 
-            <span class="text-slate-400 italic"># 循环继续，下一次考察原第二名</span>
-    <span class="text-purple-600 font-bold">else</span>:
-        <span class="text-slate-400 italic"># 已经是新鲜值 -> 直接选中</span>
-        select(candidate)</code></pre>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Right: Core Concept & Complexity -->
-                    <div class="col-span-6 animate-enter delay-200 flex flex-col gap-6">
-
-                        <!-- Core Logic Card -->
-                        <div class="glass-card p-6 rounded-2xl border-l-4 border-blue-500">
-                            <h4 class="font-bold text-blue-800 mb-3 flex items-center text-lg">
-                                <i class="fa-solid fa-lightbulb mr-3"></i> 核心逻辑
-                            </h4>
-                            <ul class="space-y-4 text-slate-600 text-sm">
-                                <li class="flex items-start">
-                                    <i class="fa-solid fa-check text-blue-500 mt-1 mr-3"></i>
-                                    <div>
-                                        <span class="font-bold text-slate-800">增益上限性质：</span>
-                                        <p>队列中的“旧增益”永远是真实增益的<span class="font-bold text-amber-600">上限 (Upper
-                                                Bound)</span>。</p>
-                                    </div>
-                                </li>
-                                <li class="flex items-start">
-                                    <i class="fa-solid fa-check text-blue-500 mt-1 mr-3"></i>
-                                    <div>
-                                        <span class="font-bold text-slate-800">懒惰计算 (Lazy Evaluation)：</span>
-                                        <p>只有当“第一名”的地位受到威胁时，才重新计算它的真实价值。</p>
-                                    </div>
-                                </li>
-                            </ul>
-                        </div>
-
-                        <!-- Complexity Analysis Card -->
-                        <div
-                            class="glass-card p-5 rounded-2xl border-t-4 border-emerald-500 bg-white shadow-md relative overflow-hidden flex flex-col justify-center h-full">
-                            <div class="absolute -right-6 -bottom-6 text-emerald-50 text-8xl pointer-events-none"><i
-                                    class="fa-solid fa-chart-line"></i></div>
-
-                            <h4 class="font-bold text-slate-800 mb-3 flex items-center gap-2 text-base">
-                                <i class="fa-solid fa-function text-emerald-500"></i> 时间复杂度
-                            </h4>
-
-                            <div class="space-y-3 relative z-10 text-sm">
-                                <p class="text-xs text-slate-500">
-                                    令 <span class="font-mono font-bold">Cost</span> 为单次目标函数评估耗时（最耗时部分）。
-                                </p>
-
-                                <!-- Standard Greedy -->
-                                <div class="bg-red-50/80 p-3 rounded-lg border border-red-100">
-                                    <div class="flex justify-between items-center mb-1">
-                                        <span class="text-red-700 font-bold text-xs">Standard Greedy</span>
-                                    </div>
-                                    <div class="flex items-center gap-2 mb-1">
-                                        <span class="font-mono text-red-600 font-bold text-sm">\( \mathcal{O}(K \cdot N
-                                            \cdot \text{Cost}) \)</span>
-                                    </div>
-                                    <p class="text-[10px] text-red-500/80 leading-tight">
-                                        每一轮都要重新计算剩余所有 \(N\) 个候选点的增益。计算量巨大。
-                                    </p>
+                                    class="absolute -right-10 -top-10 w-40 h-40 bg-blue-50 rounded-full blur-3xl -z-10 opacity-60">
                                 </div>
 
-                                <!-- Lazy Greedy -->
-                                <div class="bg-emerald-50/80 p-3 rounded-lg border border-emerald-100">
-                                    <div class="flex justify-between items-center mb-1">
-                                        <span class="text-emerald-700 font-bold text-xs">Lazy Greedy</span>
+                                <div class="relative z-10">
+                                    <div class="flex items-center gap-4 text-slate-800 font-bold text-2xl mb-2">
+                                        <div
+                                            class="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600 shadow-sm">
+                                            <i class="fa-solid fa-industry"></i>
+                                        </div>
+                                        <div>
+                                            eBPF 已成事实标准
+                                            <span
+                                                class="block text-[11px] text-blue-400 font-normal mt-1 uppercase tracking-widest font-mono">Industry
+                                                Standard</span>
+                                        </div>
                                     </div>
-                                    <div class="flex items-center gap-2 mb-1">
-                                        <span class="font-mono text-emerald-600 font-bold text-sm">\( \mathcal{O}(N
-                                            \cdot \text{Cost} + K \cdot \bar{n} \cdot \text{Cost}) \)</span>
-                                    </div>
-                                    <p class="text-[10px] text-emerald-600/80 leading-tight">
-                                        仅初始化需 \(N\) 次计算。后续每轮平均仅需重算 \(\bar{n}\) 个点 (\(\bar{n} \ll N\))。
-                                    </p>
+                                    <div class="w-full h-px bg-gradient-to-r from-blue-200 to-transparent my-6"></div>
                                 </div>
 
-                                <div class="text-center">
-                                    <span class="text-xs font-bold text-slate-400">实测差异：</span>
-                                    <span class="font-mono font-bold text-slate-600 text-xs">\( K \cdot N \gg N + K
-                                        \cdot \bar{n} \)</span>
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
-
-                </div>
-            </div>
-        </section>
-
-        <!-- Slide 7: 算法执行示例 (Example Flow) -->
-        <section class="slide">
-            <div class="container mx-auto px-12 h-full flex flex-col justify-center">
-                <div class="mb-8 animate-enter text-center">
-                    <h2 class="text-4xl font-bold text-slate-800 mb-2">06 算法执行示例 (Example Process)</h2>
-                    <p class="text-gray-500 text-lg">Lazy Greedy 如何通过重新排序找到真正的最优解</p>
-                </div>
-
-                <div class="grid grid-cols-3 gap-6 animate-enter delay-100 items-start">
-
-                    <!-- Round 1: A fails -->
-                    <div
-                        class="glass-card p-5 rounded-xl border border-gray-200 relative group hover:border-red-300 transition-colors">
-                        <div
-                            class="absolute -top-3 -left-3 w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center font-bold text-slate-600 border border-white shadow-sm">
-                            1</div>
-                        <h4 class="text-center font-bold text-slate-700 mb-4 pb-2 border-b border-gray-100">第一轮：考察 A
-                        </h4>
-
-                        <!-- Queue State -->
-                        <div class="space-y-2 mb-4 text-sm">
-                            <div
-                                class="flex justify-between items-center bg-blue-50 p-2 rounded border border-blue-100">
-                                <span class="font-bold text-blue-800">A</span>
-                                <span class="font-mono text-gray-500">Old: 100</span>
-                            </div>
-                            <div class="flex justify-between items-center opacity-60 px-2">
-                                <span>B</span> <span class="font-mono text-xs">Old: 90</span>
-                            </div>
-                            <div class="flex justify-between items-center opacity-40 px-2">
-                                <span>C</span> <span class="font-mono text-xs">Old: 80</span>
-                            </div>
-                        </div>
-
-                        <!-- Action -->
-                        <div class="bg-red-50 p-3 rounded-lg text-xs border border-red-100 text-slate-600">
-                            <p class="mb-1"><i class="fa-solid fa-rotate-right text-red-400 mr-1"></i> 重算 A: <span
-                                    class="font-bold text-red-600">100 &rarr; 60</span></p>
-                            <p class="mb-1 border-t border-red-200 pt-1 mt-1 font-bold">判定: 60 < 90 (B)</p>
-                                    <p class="text-red-700 font-bold"><i class="fa-solid fa-xmark mr-1"></i>A 失去第一，放回
-                                    </p>
-                        </div>
-                    </div>
-
-                    <!-- Round 2: B fails -->
-                    <div
-                        class="glass-card p-5 rounded-xl border border-gray-200 relative group hover:border-red-300 transition-colors">
-                        <div
-                            class="absolute -top-3 -left-3 w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center font-bold text-slate-600 border border-white shadow-sm">
-                            2</div>
-                        <h4 class="text-center font-bold text-slate-700 mb-4 pb-2 border-b border-gray-100">第二轮：考察 B
-                        </h4>
-
-                        <!-- Queue State -->
-                        <div class="space-y-2 mb-4 text-sm">
-                            <div
-                                class="flex justify-between items-center bg-blue-50 p-2 rounded border border-blue-100">
-                                <span class="font-bold text-blue-800">B</span>
-                                <span class="font-mono text-gray-500">Old: 90</span>
-                            </div>
-                            <div class="flex justify-between items-center opacity-60 px-2">
-                                <span>C</span> <span class="font-mono text-xs">Old: 80</span>
-                            </div>
-                            <div class="flex justify-between items-center px-2 text-slate-400">
-                                <span>A</span> <span class="font-mono text-xs">New: 60</span>
-                            </div>
-                        </div>
-
-                        <!-- Action -->
-                        <div class="bg-red-50 p-3 rounded-lg text-xs border border-red-100 text-slate-600">
-                            <p class="mb-1"><i class="fa-solid fa-rotate-right text-red-400 mr-1"></i> 重算 B: <span
-                                    class="font-bold text-red-600">90 &rarr; 70</span></p>
-                            <p class="mb-1 border-t border-red-200 pt-1 mt-1 font-bold">判定: 70 < 80 (C)</p>
-                                    <p class="text-red-700 font-bold"><i class="fa-solid fa-xmark mr-1"></i>B 失去第一，放回
-                                    </p>
-                        </div>
-                    </div>
-
-                    <!-- Round 3: C wins -->
-                    <div
-                        class="glass-card p-5 rounded-xl border-l-4 border-emerald-500 relative bg-emerald-50/10 shadow-lg transform scale-105">
-                        <div
-                            class="absolute -top-3 -left-3 w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center font-bold text-white border-2 border-white shadow-sm">
-                            3</div>
-                        <h4 class="text-center font-bold text-emerald-800 mb-4 pb-2 border-b border-emerald-100">第三轮：考察
-                            C</h4>
-
-                        <!-- Queue State -->
-                        <div class="space-y-2 mb-4 text-sm">
-                            <div
-                                class="flex justify-between items-center bg-emerald-100 p-2 rounded border border-emerald-200 shadow-sm">
-                                <span class="font-bold text-emerald-800">C</span>
-                                <span class="font-mono text-emerald-700">Old: 80</span>
-                            </div>
-                            <div class="flex justify-between items-center px-2 text-slate-400">
-                                <span>B</span> <span class="font-mono text-xs">New: 70</span>
-                            </div>
-                            <div class="flex justify-between items-center px-2 text-slate-400">
-                                <span>A</span> <span class="font-mono text-xs">New: 60</span>
-                            </div>
-                        </div>
-
-                        <!-- Action -->
-                        <div class="bg-emerald-50 p-3 rounded-lg text-xs border border-emerald-100 text-slate-600">
-                            <p class="mb-1"><i class="fa-solid fa-rotate-right text-emerald-500 mr-1"></i> 重算 C: <span
-                                    class="font-bold text-emerald-600">80 &rarr; 75</span></p>
-                            <p class="mb-1 border-t border-emerald-200 pt-1 mt-1 font-bold">判定: 75 > 70 (B)</p>
-                            <div
-                                class="flex items-center gap-2 mt-2 text-emerald-700 font-bold bg-white p-2 rounded border border-emerald-200 justify-center">
-                                <i class="fa-solid fa-check-circle text-lg"></i> 选中 C!
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-
-                <!-- Summary Arrow -->
-                <div class="mt-8 text-center animate-enter delay-200">
-                    <p
-                        class="text-slate-500 text-sm bg-white/50 inline-block px-6 py-2 rounded-full border border-gray-200">
-                        <i class="fa-solid fa-info-circle mr-2 text-blue-400"></i>
-                        结论：即便 A 和 B 初始期望很高，但在考虑当前上下文后，C 才是真正的增益最大者。
-                    </p>
-                </div>
-            </div>
-        </section>
-
-        <!-- Slide 8: 实验设置 (Refactored) -->
-        <section class="slide">
-            <div class="container mx-auto px-12 h-full flex flex-col justify-center">
-                <h2 class="text-4xl font-bold text-slate-800 mb-12 animate-enter text-center">07 实验设置 (Experimental
-                    Setup)</h2>
-
-                <div class="grid grid-cols-3 gap-8 animate-enter delay-100 items-stretch">
-
-                    <!-- Physical Environment -->
-                    <div
-                        class="glass-card p-8 rounded-xl border-t-4 border-blue-500 flex flex-col hover:-translate-y-1 transition-transform">
-                        <h4 class="font-bold text-slate-700 mb-6 flex items-center text-lg">
-                            <span
-                                class="w-10 h-10 rounded bg-blue-100 text-blue-600 flex items-center justify-center mr-3 text-lg"><i
-                                    class="fa-solid fa-cube"></i></span>
-                            物理环境
-                        </h4>
-                        <ul class="space-y-4 text-base text-slate-600 flex-grow">
-                            <li class="flex justify-between border-b border-gray-100 pb-2">
-                                <span>三维声波模型</span>
-                                <span class="font-mono font-bold text-blue-700">51 &times; 51 &times; 51</span>
-                            </li>
-                            <li class="flex justify-between">
-                                <span>介质属性</span>
-                                <span class="font-mono text-sm bg-slate-100 px-2 py-1 rounded">\( V_p = 2.0 \text{
-                                    km/s} \)</span>
-                            </li>
-                        </ul>
-                    </div>
-
-                    <!-- Parameters -->
-                    <div
-                        class="glass-card p-8 rounded-xl border-t-4 border-amber-500 flex flex-col hover:-translate-y-1 transition-transform">
-                        <h4 class="font-bold text-slate-700 mb-6 flex items-center text-lg">
-                            <span
-                                class="w-10 h-10 rounded bg-amber-100 text-amber-600 flex items-center justify-center mr-3 text-lg"><i
-                                    class="fa-solid fa-sliders"></i></span>
-                            参数配置
-                        </h4>
-                        <div class="space-y-6 text-base text-slate-600 flex-grow">
-                            <div>
-                                <span class="font-bold text-slate-800 block mb-2">候选集合 (\(V\))</span>
-                                <p class="text-sm text-slate-500">固定深度 \(Z=20m\) 平面的 <span
-                                        class="font-bold text-amber-600">80</span> 个均匀分布点。</p>
-                            </div>
-                            <div>
-                                <span class="font-bold text-slate-800 block mb-2">预算约束 (\(K\))</span>
-                                <p class="text-sm text-slate-500">目标选择 <span
-                                        class="font-bold text-emerald-600">\(K=15\)</span>
-                                    个最优震源。</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Baselines -->
-                    <div
-                        class="glass-card p-8 rounded-xl border-t-4 border-purple-500 flex flex-col hover:-translate-y-1 transition-transform">
-                        <h4 class="font-bold text-slate-700 mb-6 flex items-center text-lg">
-                            <span
-                                class="w-10 h-10 rounded bg-purple-100 text-purple-600 flex items-center justify-center mr-3 text-lg"><i
-                                    class="fa-solid fa-code-compare"></i></span>
-                            对比算法
-                        </h4>
-                        <div class="flex flex-col gap-3 text-sm flex-grow justify-center">
-                            <span
-                                class="bg-gray-100 text-gray-600 px-4 py-3 rounded-lg border border-gray-200 block text-center">1.
-                                Random Sampling</span>
-                            <span
-                                class="bg-emerald-50 text-emerald-700 px-4 py-3 rounded-lg border border-emerald-100 font-bold block text-center shadow-sm">2.
-                                Lazy Greedy (Ours)</span>
-                            <span
-                                class="bg-purple-50 text-purple-700 px-4 py-3 rounded-lg border border-purple-100 block text-center">3.
-                                Local Search</span>
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-        </section>
-
-        <!-- Slide 9: 优化效果对比 (Optimization Performance) -->
-        <section class="slide">
-            <div class="container mx-auto px-12 h-full flex flex-col justify-center">
-                <h2 class="text-4xl font-bold text-slate-800 mb-6 animate-enter text-center">08 优化效果对比 (Optimization
-                    Performance)</h2>
-
-                <div class="flex flex-col gap-6 animate-enter delay-100 h-auto">
-
-                    <!-- Top: Metrics & Interpretation (Split) -->
-                    <div class="grid grid-cols-12 gap-6">
-                        <!-- Objective Value Metric -->
-                        <div
-                            class="col-span-4 glass-card p-5 rounded-xl border-l-4 border-blue-500 flex flex-col justify-center">
-                            <h4 class="font-bold text-slate-700 mb-2 flex items-center">
-                                <i class="fa-solid fa-chart-bar text-blue-500 mr-2"></i> 目标函数值
-                            </h4>
-                            <p class="text-sm text-slate-600 mb-2">
-                                指标：负对数行列式 <span class="font-mono bg-slate-100 px-1 rounded">\(-\log
-                                    \det(\mathbf{F}_S)\)</span>
-                            </p>
-                            <span
-                                class="inline-block bg-blue-50 text-blue-700 text-xs font-bold px-2 py-1 rounded border border-blue-100 w-fit">
-                                <i class="fa-solid fa-arrow-down mr-1"></i> Lower is Better
-                            </span>
-                        </div>
-
-                        <!-- Data Interpretation -->
-                        <div
-                            class="col-span-8 glass-card p-5 rounded-xl border border-gray-200 flex flex-col justify-center">
-                            <h4 class="font-bold text-slate-800 mb-3 border-b border-gray-100 pb-2">数据解读</h4>
-                            <ul class="grid grid-cols-3 gap-4 text-sm">
-                                <li class="flex flex-col gap-1">
-                                    <div class="flex items-center gap-2">
-                                        <span class="w-2 h-2 rounded-full bg-cyan-400 shrink-0 shadow-sm"></span>
-                                        <span class="font-bold text-cyan-600 text-xs">Random</span>
-                                    </div>
-                                    <p class="text-slate-500 text-[10px] leading-tight">误差最大，不确定性最高。</p>
-                                </li>
-                                <li class="flex flex-col gap-1">
-                                    <div class="flex items-center gap-2">
-                                        <span class="w-2 h-2 rounded-full bg-purple-500 shrink-0 shadow-sm"></span>
-                                        <span class="font-bold text-purple-700 text-xs">Greedy</span>
-                                    </div>
-                                    <p class="text-slate-500 text-[10px] leading-tight">显著优于随机，已非常接近最优解。</p>
-                                </li>
-                                <li class="flex flex-col gap-1">
-                                    <div class="flex items-center gap-2">
-                                        <span class="w-2 h-2 rounded-full bg-red-500 shrink-0 shadow-sm"></span>
-                                        <span class="font-bold text-red-700 text-xs">Local Search</span>
-                                    </div>
-                                    <p class="text-slate-500 text-[10px] leading-tight">进一步挖掘潜在收益，实现最低目标值。</p>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <!-- Bottom: Visualizations (Side by Side) -->
-                    <div class="grid grid-cols-2 gap-8 h-80">
-
-                        <!-- Image 1: Bar Chart -->
-                        <div
-                            class="glass-card p-0 rounded-xl border border-gray-200 overflow-hidden shadow-xl bg-white flex flex-col h-full hover:-translate-y-1 transition-transform duration-300">
-                            <!-- Mac Title Bar -->
-                            <div
-                                class="bg-gray-100 px-4 py-2 border-b border-gray-200 flex items-center justify-between shrink-0 h-8">
-                                <div class="flex gap-1.5">
-                                    <div class="w-2.5 h-2.5 rounded-full bg-[#ff5f56] border border-[#e0443e]"></div>
-                                    <div class="w-2.5 h-2.5 rounded-full bg-[#ffbd2e] border border-[#dea123]"></div>
-                                    <div class="w-2.5 h-2.5 rounded-full bg-[#27c93f] border border-[#1aab29]"></div>
-                                </div>
-                                <span class="text-[10px] font-mono text-gray-500 font-bold"></span>
-                                <div class="w-10"></div>
-                            </div>
-                            <!-- Image Container -->
-                            <div
-                                class="flex-grow flex items-center justify-center bg-white p-2 relative overflow-hidden group">
-                                <img src="assets/f7.png" class="w-full h-full object-contain"
-                                    alt="Objective Value Bar Chart">
-                            </div>
-                        </div>
-
-                        <!-- Image 2: Convergence Curve -->
-                        <div
-                            class="glass-card p-0 rounded-xl border border-gray-200 overflow-hidden shadow-xl bg-white flex flex-col h-full hover:-translate-y-1 transition-transform duration-300">
-                            <!-- Mac Title Bar -->
-                            <div
-                                class="bg-gray-100 px-4 py-2 border-b border-gray-200 flex items-center justify-between shrink-0 h-8">
-                                <div class="flex gap-1.5">
-                                    <div class="w-2.5 h-2.5 rounded-full bg-[#ff5f56] border border-[#e0443e]"></div>
-                                    <div class="w-2.5 h-2.5 rounded-full bg-[#ffbd2e] border border-[#dea123]"></div>
-                                    <div class="w-2.5 h-2.5 rounded-full bg-[#27c93f] border border-[#1aab29]"></div>
-                                </div>
-                                <span class="text-[10px] font-mono text-gray-500 font-bold"></span>
-                                <div class="w-10"></div>
-                            </div>
-                            <!-- Image Container -->
-                            <div
-                                class="flex-grow flex items-center justify-center bg-white p-2 relative overflow-hidden group">
-                                <img src="assets/f5.png" class="w-full h-full object-contain" alt="Convergence Curve">
-                            </div>
-                        </div>
-
-                    </div>
-
-                </div>
-            </div>
-        </section>
-
-        <!-- Slide 10: 算法效率分析 (Computational Efficiency) -->
-        <section class="slide">
-            <div class="container mx-auto px-12 h-full flex flex-col justify-center">
-                <h2 class="text-4xl font-bold text-slate-800 mb-8 animate-enter">09 算法效率分析 (Computational Efficiency)
-                </h2>
-
-                <div class="grid grid-cols-12 gap-10 h-auto items-center">
-
-                    <!-- Left: Analysis Content -->
-                    <div class="col-span-5 flex flex-col gap-6 animate-enter delay-100">
-
-                        <!-- Analysis Goal -->
-                        <div class="glass-card p-5 rounded-xl border-l-4 border-blue-500">
-                            <h4 class="font-bold text-slate-700 mb-2 flex items-center">
-                                <i class="fa-solid fa-stopwatch text-blue-500 mr-2"></i> 时间复杂度分析
-                            </h4>
-                            <p class="text-sm text-slate-600">
-                                考察当选择数量 <span class="font-mono font-bold text-blue-700">K</span> 从 10 增加到 30
-                                时，不同算法的计算耗时变化。
-                            </p>
-                        </div>
-
-                        <!-- Key Findings -->
-                        <div class="glass-card p-6 rounded-xl border border-gray-200">
-                            <h4 class="font-bold text-slate-800 mb-4 border-b border-gray-100 pb-2">关键发现</h4>
-                            <ul class="space-y-4 text-sm">
-                                <li class="flex gap-3">
-                                    <span
-                                        class="w-3 h-3 rounded-full bg-purple-500 mt-1.5 shrink-0 shadow-sm border border-purple-200"></span>
-                                    <div>
-                                        <span class="font-bold text-purple-700">Lazy Greedy</span>
-                                        <p class="text-slate-600 text-xs mt-1 leading-relaxed">
-                                            高效且惰性机制成功避免了大量冗余计算。
+                                <div class="relative z-10 mb-6">
+                                    <div class="pl-4 border-l-4 border-blue-400 py-1">
+                                        <h4 class="font-bold text-blue-700 text-lg mb-2">云原生与安全 (Success Stories)</h4>
+                                        <p class="text-sm text-slate-600 leading-relaxed text-justify">
+                                            <span class="font-bold text-slate-800 bg-blue-50 px-1 rounded">Meta
+                                                Katran</span> (L4 LB) 与 <span
+                                                class="font-bold text-slate-800 bg-blue-50 px-1 rounded">Cilium</span>
+                                            (Security) 利用 eBPF 实现了无内核补丁的高性能转发，已在大规模生产环境中验证了绝对统治力。
                                         </p>
                                     </div>
-                                </li>
-                                <li class="flex gap-3">
-                                    <span
-                                        class="w-3 h-3 rounded-full bg-red-500 mt-1.5 shrink-0 shadow-sm border border-red-200"></span>
-                                    <div>
-                                        <span class="font-bold text-red-700">Local Search</span>
-                                        <p class="text-slate-600 text-xs mt-1 leading-relaxed">
-                                            相比之下耗时略高。
-                                        </p>
+                                </div>
+
+                                <div class="relative z-10 mt-auto">
+                                    <div
+                                        class="bg-white/60 backdrop-blur-sm rounded-xl p-5 border border-blue-100 shadow-sm">
+                                        <h4 class="font-bold text-slate-700 text-sm mb-3 flex items-center gap-2">
+                                            <i class="fa-solid fa-circle-info text-blue-400"></i>
+                                            ICC 领域的当前定位: <span class="text-blue-700 font-black">“辅助支撑”</span>
+                                        </h4>
+
+                                        <div class="space-y-3">
+                                            <div class="flex items-start gap-3">
+                                                <div class="mt-1 w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0"></div>
+                                                <div>
+                                                    <span class="block text-xs font-bold text-slate-700">深度观测
+                                                        (Observability)</span>
+                                                    <p class="text-[11px] text-slate-500 leading-tight mt-0.5">
+                                                        透视 TCP 内部状态 (RTT, cwnd)，作为“显微镜”辅助决策。
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-start gap-3">
+                                                <div class="mt-1 w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0"></div>
+                                                <div>
+                                                    <span class="block text-xs font-bold text-slate-700">动态编排
+                                                        (Orchestration)</span>
+                                                    <p class="text-[11px] text-slate-500 leading-tight mt-0.5">
+                                                        动态调整传统内核参数 (sysctl) 或切换算法，非直接接管执行。
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                </li>
-                            </ul>
+                                </div>
+
+                            </div>
                         </div>
 
-                        <!-- Conclusion -->
-                        <div
-                            class="glass-card p-4 rounded-xl border-t-4 border-emerald-500 bg-emerald-50/30 text-center">
-                            <p class="text-xs text-emerald-600 font-bold uppercase tracking-widest mb-1">Conclusion</p>
-                            <p class="text-slate-700 font-bold text-sm">
-                                惰性贪心策略在工程实时性上具有<span class="text-emerald-700 text-lg mx-1">压倒性优势</span>。
-                            </p>
-                        </div>
+                        <div class="col-span-7 animate-enter delay-200">
+                            <div class="glass-card p-6 rounded-2xl h-full border-t-4 border-amber-500 flex flex-col">
+                                <div class="flex items-center gap-3 text-slate-800 font-bold text-xl mb-5">
+                                    <div
+                                        class="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600">
+                                        <i class="fa-solid fa-road"></i>
+                                    </div>
+                                    智能拥塞控制 (ICC) 三大流派
+                                </div>
 
+                                <div class="grid grid-cols-1 gap-3 flex-1 content-start">
+
+                                    <div
+                                        class="p-4 bg-white/80 rounded-xl border border-amber-100 shadow-sm hover:border-amber-300 transition-all group">
+                                        <div class="flex justify-between items-start mb-2">
+                                            <div class="flex items-center gap-2">
+                                                <i class="fa-solid fa-brain text-amber-500"></i>
+                                                <span class="text-sm font-bold text-slate-700">学习驱动
+                                                    (Learning-driven)</span>
+                                            </div>
+                                            <span
+                                                class="text-[10px] font-mono bg-slate-100 text-slate-500 px-2 py-1 rounded border border-slate-200">DeepCC
+                                                [Sigcomm'20]</span>
+                                        </div>
+                                        <div
+                                            class="text-xs text-slate-500 leading-relaxed pl-6 border-l-2 border-amber-100 group-hover:border-amber-300 transition-colors">
+                                            <span class="text-amber-600 font-bold">核心思路：</span>利用 DRL 学习帕累托最优策略集。<br>
+                                            <span class="text-amber-600 font-bold">局限性：</span>模型推理开销大，难以应对高并发短流。
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        class="p-4 bg-white/80 rounded-xl border border-amber-100 shadow-sm hover:border-amber-300 transition-all group">
+                                        <div class="flex justify-between items-start mb-2">
+                                            <div class="flex items-center gap-2">
+                                                <i class="fa-solid fa-satellite-dish text-amber-500"></i>
+                                                <span class="text-sm font-bold text-slate-700">遥测驱动
+                                                    (Telemetry-driven)</span>
+                                            </div>
+                                            <span
+                                                class="text-[10px] font-mono bg-slate-100 text-slate-500 px-2 py-1 rounded border border-slate-200">TCP's
+                                                Third Eye [NSDI'23]</span>
+                                        </div>
+                                        <div
+                                            class="text-xs text-slate-500 leading-relaxed pl-6 border-l-2 border-amber-100 group-hover:border-amber-300 transition-colors">
+                                            <span class="text-amber-600 font-bold">核心思路：</span>利用 eBPF 消费最拥塞跳的 INT
+                                            遥测数据。<br>
+                                            <span class="text-amber-600 font-bold">局限性：</span>依赖 TCP 选项字段，严重破坏 GRO
+                                            机制导致吞吐下降。
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        class="p-4 bg-white/80 rounded-xl border border-amber-100 shadow-sm hover:border-amber-300 transition-all group">
+                                        <div class="flex justify-between items-start mb-2">
+                                            <div class="flex items-center gap-2">
+                                                <i class="fa-solid fa-chart-line text-amber-500"></i>
+                                                <span class="text-sm font-bold text-slate-700">启发式与可编程
+                                                    (Heuristic)</span>
+                                            </div>
+                                            <span
+                                                class="text-[10px] font-mono bg-slate-100 text-slate-500 px-2 py-1 rounded border border-slate-200">eTran
+                                                [NSDI'24]</span>
+                                        </div>
+                                        <div
+                                            class="text-xs text-slate-500 leading-relaxed pl-6 border-l-2 border-amber-100 group-hover:border-amber-300 transition-colors">
+                                            <span class="text-amber-600 font-bold">核心思路：</span>在 XDP 层实现定制化传输协议 (如
+                                            Homa)。<br>
+                                            <span class="text-amber-600 font-bold">局限性：</span>需修改内核源码添加钩子，非标准 eBPF 路径。
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- Right: Mac Style Image Placeholder (Chart) -->
-                    <div class="col-span-7 animate-enter delay-200 h-full">
+                    <div class="w-full animate-enter delay-300">
                         <div
-                            class="glass-card p-0 rounded-xl border border-gray-200 overflow-hidden shadow-2xl bg-white h-full flex flex-col">
-                            <!-- Mac Title Bar -->
+                            class="bg-slate-800 rounded-2xl p-6 shadow-xl flex items-center gap-8 relative overflow-hidden group border border-slate-700">
+
                             <div
-                                class="bg-gray-100 px-4 py-3 border-b border-gray-200 flex items-center justify-between shrink-0">
-                                <div class="flex gap-2">
-                                    <div class="w-3 h-3 rounded-full bg-[#ff5f56] border border-[#e0443e]"></div>
-                                    <div class="w-3 h-3 rounded-full bg-[#ffbd2e] border border-[#dea123]"></div>
-                                    <div class="w-3 h-3 rounded-full bg-[#27c93f] border border-[#1aab29]"></div>
-                                </div>
-                                <span class="text-xs font-mono text-gray-500 font-bold"></span>
-                                <div class="w-10"></div>
+                                class="absolute -left-10 top-0 w-64 h-full bg-gradient-to-r from-amber-500/20 to-transparent skew-x-12 group-hover:from-amber-500/30 transition-all duration-700">
                             </div>
 
-                            <!-- Image Area -->
-                            <div
-                                class="flex-grow bg-white flex items-center justify-center p-2 relative overflow-hidden group">
-                                <img src="assets/f6.png" class="w-full h-full object-contain max-h-80"
-                                    alt="Time Scalability Plot">
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-        </section>
-
-        <!-- Slide 11: 空间分布可视化 (Spatial Configuration) -->
-        <section class="slide">
-            <div class="container mx-auto px-12 h-full flex flex-col justify-center">
-                <h2 class="text-4xl font-bold text-slate-800 mb-8 animate-enter">10 空间分布可视化 (Spatial Configuration)</h2>
-
-                <div class="grid grid-cols-2 gap-10 h-auto items-center max-w-6xl mx-auto">
-
-                    <!-- Left: 3D Scatter Plot (Mac Window) -->
-                    <div class="animate-enter delay-100 h-full">
-                        <div
-                            class="glass-card p-0 rounded-xl border border-gray-200 overflow-hidden shadow-2xl bg-white h-full flex flex-col">
-                            <!-- Mac Title Bar -->
-                            <div
-                                class="bg-gray-100 px-4 py-3 border-b border-gray-200 flex items-center justify-between shrink-0">
-                                <div class="flex gap-2">
-                                    <div class="w-3 h-3 rounded-full bg-[#ff5f56] border border-[#e0443e]"></div>
-                                    <div class="w-3 h-3 rounded-full bg-[#ffbd2e] border border-[#dea123]"></div>
-                                    <div class="w-3 h-3 rounded-full bg-[#27c93f] border border-[#1aab29]"></div>
-                                </div>
-                                <span class="text-xs font-mono text-gray-500 font-bold"></span>
-                                <div class="w-10"></div>
+                            <div class="relative z-10 shrink-0 flex flex-col items-center justify-center pl-4">
+                                <i
+                                    class="fa-solid fa-triangle-exclamation text-4xl text-amber-400 mb-1 animate-pulse"></i>
+                                <span class="text-[10px] font-bold text-amber-500 uppercase tracking-widest">Reality
+                                    Gap</span>
                             </div>
 
-                            <!-- Image Visualization -->
-                            <div
-                                class="flex-grow bg-white flex items-center justify-center p-2 relative overflow-hidden group">
-                                <img src="assets/f4.png" class="w-full h-full object-contain max-h-80"
-                                    alt="Spatial Distribution">
-                            </div>
-                        </div>
-                    </div>
+                            <div class="w-px h-12 bg-slate-600"></div>
 
-                    <!-- Right: Analysis & Conclusion -->
-                    <div class="flex flex-col gap-6 animate-enter delay-200">
-
-                        <!-- Legend -->
-                        <div class="glass-card p-4 rounded-xl border border-gray-200 bg-white/50">
-                            <h4 class="font-bold text-slate-700 text-xs uppercase tracking-widest mb-3">Legend</h4>
-                            <div class="flex gap-4 text-sm">
-                                <div class="flex items-center gap-2">
-                                    <span class="w-3 h-3 rounded-full bg-amber-200 border border-amber-300"></span>
-                                    <span class="text-slate-600">Candidates (All)</span>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <span
-                                        class="w-3 h-3 rounded-full bg-red-500 border border-red-600 shadow-sm"></span>
-                                    <span class="text-slate-800 font-bold">Selected (Optimal)</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Geometric Analysis -->
-                        <div class="glass-card p-6 rounded-xl border-l-4 border-indigo-500">
-                            <h4 class="font-bold text-slate-700 mb-4 flex items-center">
-                                <i class="fa-solid fa-shapes text-indigo-500 mr-2"></i> 几何特征分析
-                            </h4>
-                            <ul class="space-y-4 text-sm">
-                                <li class="group">
-                                    <span
-                                        class="font-bold text-indigo-700 block mb-1 group-hover:text-indigo-600 transition-colors">
-                                        <i class="fa-solid fa-expand mr-1"></i> 最大化空间支撑
-                                    </span>
-                                    <p class="text-slate-600 text-xs leading-relaxed">
-                                        选出的点没有聚集，而是<span
-                                            class="font-bold text-slate-800">均匀撑开</span>了整个观测平面，保证了对地下结构的全面照明。
+                            <div class="relative z-10 flex-1 grid grid-cols-2 gap-8 items-center">
+                                <div>
+                                    <p class="text-sm text-slate-300 leading-relaxed">
+                                        尽管学术界百花齐放，但 eBPF 目前在 ICC 中多仅用于 <span
+                                            class="text-amber-300 font-bold border-b border-amber-300/30 pb-0.5">旁路观测</span>
+                                        或 <span
+                                            class="text-amber-300 font-bold border-b border-amber-300/30 pb-0.5">动态配置</span>。
                                     </p>
-                                </li>
-                                <li class="group">
-                                    <span
-                                        class="font-bold text-indigo-700 block mb-1 group-hover:text-indigo-600 transition-colors">
-                                        <i class="fa-solid fa-border-all mr-1"></i> 边界覆盖 (Edge Coverage)
-                                    </span>
-                                    <p class="text-slate-600 text-xs leading-relaxed">
-                                        算法自动选取了边缘和角落的点，最大化了<span class="font-bold text-slate-800">观测孔径
-                                            (Aperture)</span>。
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <i class="fa-solid fa-arrow-right text-slate-500"></i>
+                                    <p
+                                        class="text-sm text-white font-bold bg-white/10 px-4 py-2 rounded-lg border border-white/10">
+                                        旗舰算法 (Google BBR) 仍依赖原生内核模块，尚未实现真正的“内核级智能执行”。
                                     </p>
-                                </li>
-                            </ul>
-                        </div>
-
-                        <!-- Conclusion -->
-                        <div
-                            class="glass-card p-4 rounded-xl border-t-4 border-emerald-500 bg-emerald-50/30 text-center">
-                            <div class="flex items-center justify-center gap-2 mb-1">
-                                <i class="fa-solid fa-circle-check text-emerald-500"></i>
-                                <span
-                                    class="text-xs text-emerald-600 font-bold uppercase tracking-widest">Insight</span>
+                                </div>
                             </div>
-                            <p class="text-slate-700 font-bold text-sm">
-                                算法自动实现了<br><span class="text-emerald-700 text-lg">几何覆盖的最优化</span>
-                            </p>
-                        </div>
 
+                        </div>
                     </div>
 
                 </div>
             </div>
         </section>
 
-        <!-- Slide 12: 总结 (Conclusion) -->
-<section class="slide">
-            <div class="flex flex-col items-center justify-center h-full max-w-6xl mx-auto text-center animate-enter">
-                <div class="blob bg-emerald-200 w-96 h-96 opacity-20 -z-10"></div>
-
-                <h2 class="text-4xl font-bold text-slate-800 mb-12">11 总结 (Conclusion)</h2>
-
-                <div class="grid grid-cols-2 gap-12 w-full max-w-5xl mx-auto items-stretch">
-                    
-                    <div class="glass-card p-8 rounded-2xl shadow-sm border-t-4 border-blue-500 hover:-translate-y-1 transition-transform flex flex-col">
-                        <div class="w-16 h-16 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-3xl mb-6 mx-auto shrink-0">
-                            <i class="fa-solid fa-flask"></i>
-                        </div>
-                        <h4 class="text-xl font-bold text-slate-800 mb-4">方法论与实证对比</h4>
-                        <ul class="text-sm text-slate-600 leading-relaxed text-left space-y-4 list-disc pl-4 flex-grow">
-                            <li>
-                                <span class="font-bold text-slate-700">系统构建：</span>
-                                建立了基于组合优化的全波反演 (FWI) 观测系统。
-                            </li>
-                            <li>
-                                <span class="font-bold text-slate-700">算法实现：</span>
-                                实现了 <span class="font-mono bg-blue-50 px-1 rounded text-blue-600">Lazy Greedy</span> 与
-                                <span class="font-mono bg-blue-50 px-1 rounded text-blue-600">Local Search</span>
-                                两种不同策略，并引入 Random Sampling 作为基准。
-                            </li>
-                            <li>
-                                <span class="font-bold text-slate-700">对比验证：</span>
-                                在相同实验设置下，对三种不同算法的实现进行了对比验证。
-                            </li>
-                        </ul>
-                    </div>
-
-                    <div class="glass-card p-8 rounded-2xl shadow-sm border-t-4 border-emerald-500 hover:-translate-y-1 transition-transform flex flex-col bg-emerald-50/30">
-                        <div class="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-3xl mb-6 mx-auto shrink-0">
-                            <i class="fa-solid fa-chart-line"></i>
-                        </div>
-                        <h4 class="text-xl font-bold text-slate-800 mb-4">多维度性能评估</h4>
-                        <ul class="text-sm text-slate-600 leading-relaxed text-left space-y-4 list-disc pl-4 flex-grow">
-                            <li>
-                                <span class="font-bold text-emerald-700">解的质量 (Quality)：</span>
-                                Lazy Greedy 目标函数值显著优于随机采样，且逼近局部搜索算法。
-                            </li>
-                            <li>
-                                <span class="font-bold text-emerald-700">计算效率 (Time)：</span>
-                                利用边际增益递减特性，Lazy 机制避免了大量冗余计算，耗时大幅降低。
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Slide 13: 结束页 (Thank You) -->
         <section class="slide">
-            <div
-                class="flex flex-col items-center justify-center h-full w-full animate-enter text-center relative overflow-hidden">
-                <!-- Background Decorations -->
-                <div class="blob bg-emerald-300 w-[500px] h-[500px] top-[-10%] right-[-10%] opacity-20"></div>
-                <div class="blob bg-blue-300 w-[400px] h-[400px] bottom-[-10%] left-[-10%] opacity-20"></div>
+            <div class="container mx-auto px-16 h-full flex flex-col justify-center">
+                <h2 class="text-4xl font-bold text-slate-800 mb-2 animate-enter">03 核心挑战 (Challenges)</h2>
 
-                <div class="z-10">
-                    <div class="mb-8">
-                        <i
-                            class="fa-solid fa-circle-check text-7xl text-emerald-500 mb-6 drop-shadow-md animate-bounce"></i>
-                    </div>
+                <div class="mb-8 animate-enter text-lg text-gray-600">
+                    智能算法与 eBPF 执行路径存在天然鸿沟，形成 <span class="highlight-text">“认知-执行错配”</span>
+                </div>
 
-                    <h1 class="text-6xl font-black text-slate-800 mb-4 tracking-tight">谢谢聆听</h1>
-                    <p class="text-2xl text-slate-500 font-light mb-12 font-serif italic">Thank You for Listening</p>
-
+                <div class="grid md:grid-cols-2 xl:grid-cols-4 gap-8">
                     <div
-                        class="inline-block px-10 py-4 rounded-2xl bg-white/60 backdrop-blur-md border border-slate-200 shadow-sm mb-12">
-                        <p class="text-xl font-bold text-indigo-600 flex items-center gap-3">
-                            <i class="fa-regular fa-comments"></i> Q & A
+                        class="glass-card p-8 rounded-2xl animate-enter delay-100 hover:-translate-y-1 transition-transform">
+                        <div
+                            class="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center text-red-500 text-2xl mb-4">
+                            <i class="fa-solid fa-microchip"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">计算能力鸿沟</h3>
+                        <p class="text-gray-500 text-sm leading-relaxed">
+                            智能算法需要浮点与复杂推理，eBPF 禁止浮点且指令受限，深度模型难以内核态运行。
                         </p>
                     </div>
 
-                    <div>
-                        <button onclick="goToSlide(0)"
-                            class="group px-8 py-3 rounded-full border-2 border-slate-300 text-slate-500 font-bold hover:border-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 transition-all flex items-center gap-2 mx-auto">
-                            <i
-                                class="fa-solid fa-rotate-left group-hover:-rotate-180 transition-transform duration-500"></i>
-                            重新播放
-                        </button>
+                    <div
+                        class="glass-card p-8 rounded-2xl animate-enter delay-200 hover:-translate-y-1 transition-transform">
+                        <div
+                            class="w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center text-amber-500 text-2xl mb-4">
+                            <i class="fa-solid fa-eye"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">可见性代价</h3>
+                        <p class="text-gray-500 text-sm leading-relaxed">
+                            为获取细粒度信号修改包头会破坏 GRO，吞吐下滑；逐包遥测的 CPU/缓存开销难以接受。
+                        </p>
+                    </div>
+
+                    <div
+                        class="glass-card p-8 rounded-2xl animate-enter delay-300 hover:-translate-y-1 transition-transform">
+                        <div
+                            class="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500 text-2xl mb-4">
+                            <i class="fa-solid fa-timer"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">外部控制延迟</h3>
+                        <p class="text-gray-500 text-sm leading-relaxed">
+                            用户态控制回路往返可达秒级，无法应对微秒级拥塞；内核态缺乏低延迟策略更新通路。
+                        </p>
+                    </div>
+
+                    <div
+                        class="glass-card p-8 rounded-2xl animate-enter delay-400 hover:-translate-y-1 transition-transform">
+                        <div
+                            class="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 text-2xl mb-4">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">模型直搬不可行</h3>
+                        <p class="text-gray-500 text-sm leading-relaxed">
+                            直接将深度学习模型搬进内核不可行，当前工业落地率极低，易导致可靠性与运维风险。
+                        </p>
                     </div>
                 </div>
+
+                <div class="mt-8 text-center animate-enter delay-400">
+                    <span class="bg-slate-800 text-white px-6 py-2 rounded-full text-sm font-bold shadow-lg">
+                        核心思路：将“思考”(AI 推理) 与“执行”(数据面动作) 彻底解耦
+                    </span>
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="container mx-auto px-16 h-full flex flex-col justify-center">
+                <div class="mb-8 animate-enter">
+                    <h2 class="text-4xl font-bold text-slate-800 mb-2">04 系统整体架构 (System Architecture)</h2>
+                </div>
+
+                <div class="grid grid-cols-12 gap-10 items-center h-auto">
+
+                    <div class="col-span-7 flex flex-col gap-5 animate-enter delay-100">
+                        <div class="relative w-full h-[320px] flex items-center justify-center group">
+                            <div
+                                class="absolute w-3/4 h-full bg-gradient-to-r from-emerald-100 via-blue-100 to-amber-100 rounded-full blur-3xl opacity-50 -z-10 group-hover:opacity-70 transition-opacity duration-700">
+                            </div>
+
+                            <div
+                                class="relative bg-white/80 backdrop-blur-md p-2 rounded-2xl shadow-xl border border-white/50 h-full w-full max-w-full transform transition-transform duration-500 hover:scale-[1.02]">
+                                <div
+                                    class="absolute top-0 left-0 right-0 h-8 bg-slate-50/90 border-b border-slate-100 rounded-t-2xl flex items-center px-4 gap-2 z-10">
+                                    <div class="w-3 h-3 rounded-full bg-red-400 shadow-sm"></div>
+                                    <div class="w-3 h-3 rounded-full bg-amber-400 shadow-sm"></div>
+                                    <div class="w-3 h-3 rounded-full bg-emerald-400 shadow-sm"></div>
+
+                                    <div
+                                        class="mx-auto text-[10px] text-slate-400 font-mono tracking-wider font-bold opacity-60">
+                                        System_Architecture</div>
+                                </div>
+
+                                <div
+                                    class="h-full w-full pt-8 overflow-hidden rounded-xl bg-white flex items-center justify-center">
+                                    <img src="assets/f1.png" alt="System Architecture"
+                                        class="max-h-full max-w-full object-contain">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Innovation Insight -->
+                        <div
+                            class="bg-white/60 backdrop-blur-sm border border-slate-200 p-4 rounded-xl shadow-sm hover:bg-white/80 transition-colors">
+                            <div class="flex items-start gap-4">
+                                <div
+                                    class="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center text-amber-500 shrink-0 border border-amber-100">
+                                    <i class="fa-solid fa-lightbulb"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-slate-800 text-sm mb-1">架构创新：异步双平面架构 </h4>
+                                    <p class="text-xs text-slate-600 leading-relaxed text-justify mb-2">
+                                        现有智能拥塞控制采用同步闭环模式，控制回路时延包含推理耗时以及用户态与内核态的交互。
+                                    </p>
+                                    <div
+                                        class="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100 inline-block">
+                                        规避了 eBPF 的计算约束，实现了“零推理时延”的拥塞响应<br>控制平面更新频率低至 20Hz (50ms)，数据平面仍能保持 Per-ACK
+                                        级别的微秒级响应精度
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-span-5 flex flex-col gap-4 animate-enter delay-200">
+
+                        <!-- Slow Thinking Plane -->
+                        <div
+                            class="glass-card p-5 rounded-xl border-l-4 border-blue-500 hover:-translate-y-1 transition-transform duration-300">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div
+                                    class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-500">
+                                    <i class="fa-solid fa-brain"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-blue-700 text-lg">慢思考平面 (User Space)</h4>
+                                    <div class="text-[10px] text-blue-400 font-bold uppercase tracking-wider">高维决策与策略生成
+                                    </div>
+                                </div>
+                            </div>
+                            <ul class="text-xs text-gray-600 space-y-2 pl-2">
+                                <li class="flex items-start gap-2">
+                                    <i class="fa-solid fa-robot text-blue-300 mt-1"></i>
+                                    <span><strong>AI Agent (大脑):</strong> 运行 DRL 模型，处理历史趋势与全局梯度。</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <i class="fa-solid fa-table text-blue-300 mt-1"></i>
+                                    <span><strong>Map Generator:</strong> 将推理结果转化为结构化策略表 (Policy Table)。</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <i class="fa-solid fa-arrows-rotate text-blue-300 mt-1"></i>
+                                    <span><strong>异步闭环:</strong> 10-50ms 周期轮询，不阻塞数据通路。</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- Bridge -->
+                        <div
+                            class="py-2 px-4 bg-slate-50/80 rounded-lg border border-slate-200 flex justify-between items-center shadow-sm">
+                            <div class="flex items-center gap-2">
+                                <div
+                                    class="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 text-xs">
+                                    <i class="fa-solid fa-arrow-up"></i></div>
+                                <div class="flex flex-col">
+                                    <span class="text-[10px] font-bold text-slate-700">Data Uplink</span>
+                                    <span class="text-[9px] text-slate-500">Polled Stats (无锁拉取)</span>
+                                </div>
+                            </div>
+                            <div class="h-6 w-px bg-slate-300"></div>
+                            <div class="flex items-center gap-2">
+                                <div class="flex flex-col items-end">
+                                    <span class="text-[10px] font-bold text-slate-700">Strategy Downlink</span>
+                                    <span class="text-[9px] text-slate-500">Map Push (异步更新)</span>
+                                </div>
+                                <div
+                                    class="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 text-xs">
+                                    <i class="fa-solid fa-arrow-down"></i></div>
+                            </div>
+                        </div>
+
+                        <!-- Fast Acting Plane -->
+                        <div
+                            class="glass-card p-5 rounded-xl border-l-4 border-emerald-500 hover:-translate-y-1 transition-transform duration-300">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div
+                                    class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500">
+                                    <i class="fa-solid fa-bolt"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-emerald-700 text-lg">快执行平面 (Kernel Space)</h4>
+                                    <div class="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">
+                                        微秒级响应与精准执行</div>
+                                </div>
+                            </div>
+                            <ul class="text-xs text-gray-600 space-y-2 pl-2">
+                                <li class="flex items-start gap-2">
+                                    <i class="fa-solid fa-microchip text-emerald-300 mt-1"></i>
+                                    <span><strong>eBPF (反射神经):</strong> 拦截 TCP 事件，基于Log（RTT）+梯度进行O（1）查表。</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <i class="fa-solid fa-database text-emerald-300 mt-1"></i>
+                                    <span><strong>Socket Storage:</strong> 存储 Per-Flow Maps，实现流间策略隔离。</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <i class="fa-solid fa-stopwatch text-emerald-300 mt-1"></i>
+                                    <span><strong>EDT (起搏器):</strong> 利用 Linux原生调度器实现纳秒级 Pacing。</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <i class="fa-solid fa-shield-halved text-emerald-300 mt-1"></i>
+                                    <span><strong>安全熔断:</strong> 监测到严重丢包时，直接旁路 AI 策略进行降级保护。</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="container mx-auto px-16 h-full flex flex-col justify-center">
+                <h2 class="text-4xl font-bold text-slate-800 mb-8 animate-enter">05 关键创新：策略投影与高效索引 (Projection &
+                    Indexing)</h2>
+
+                <div class="grid grid-cols-12 gap-10 items-center h-auto">
+                    <div class="col-span-7 space-y-5 animate-enter delay-100">
+
+                        <!-- Algorithm Innovation -->
+                        <div
+                            class="glass-card p-5 rounded-xl border-l-4 border-blue-500 hover:-translate-y-1 transition-transform duration-300">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div
+                                    class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-500">
+                                    <i class="fa-solid fa-project-diagram"></i>
+                                </div>
+                                <h4 class="font-bold text-blue-700 text-lg">算法创新：高维策略投影 (Map-Driven Projection)</h4>
+                            </div>
+                            <div class="pl-2">
+                                <p class="text-xs text-slate-600 mb-2 leading-relaxed">
+                                    <span class="font-bold text-slate-700">机制：</span>AI 输出<span
+                                        class="bg-blue-50 text-blue-700 px-1 rounded">向量场 (Vector
+                                        Field)</span>而非单一标量。预测在各种 RTT 与梯度组合下的最佳速率。
+                                </p>
+                                <div
+                                    class="flex items-start gap-2 text-xs text-slate-500 bg-slate-50 p-2 rounded border border-slate-100">
+                                    <i class="fa-solid fa-star text-amber-400 mt-0.5"></i>
+                                    <span><strong>核心价值：</strong>将 NN 非线性推理降维为内核 <strong>O(1) 查表</strong>，兼顾智能决策与 eBPF
+                                        轻量化要求。</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Data Structure Innovation -->
+                        <div
+                            class="glass-card p-5 rounded-xl border-l-4 border-emerald-500 hover:-translate-y-1 transition-transform duration-300">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div
+                                    class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500">
+                                    <i class="fa-solid fa-layer-group"></i>
+                                </div>
+                                <h4 class="font-bold text-emerald-700 text-lg">数据结构：对数分箱与复合索引 (Log-Binning)</h4>
+                            </div>
+                            <div class="pl-2 space-y-2">
+                                <div class="flex items-center gap-2 text-xs text-slate-600">
+                                    <span class="font-bold text-slate-700 shrink-0">对数分箱:</span>
+                                    <span>利用 <code>bpf_log2()</code> 压缩 RTT。低延迟区高精度，长肥管道宽覆盖。</span>
+                                </div>
+                                <div class="flex items-center gap-2 text-xs text-slate-600">
+                                    <span class="font-bold text-slate-700 shrink-0">复合索引:</span>
+                                    <code
+                                        class="bg-slate-100 px-1 py-0.5 rounded font-mono text-emerald-600">Index = (Log_RTT << 2) | Trend</code>
+                                </div>
+                                <div
+                                    class="flex items-start gap-2 text-xs text-slate-500 bg-slate-50 p-2 rounded border border-slate-100">
+                                    <i class="fa-solid fa-star text-amber-400 mt-0.5"></i>
+                                    <span><strong>核心价值：</strong>极低内存开销 (每流仅几百字节) 实现广域网宽动态范围覆盖与趋势感知。</span>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="col-span-5 animate-enter delay-200">
+                        <div class="relative w-full h-[360px] flex items-center justify-center group">
+                            <div
+                                class="absolute w-2/3 h-full bg-gradient-to-r from-blue-100 via-emerald-100 to-amber-100 rounded-full blur-3xl opacity-50 -z-10 group-hover:opacity-70 transition-opacity duration-700">
+                            </div>
+
+                            <div
+                                class="relative bg-white/80 backdrop-blur-md p-2 rounded-2xl shadow-xl border border-white/50 h-full w-full max-w-full transform transition-transform duration-500 hover:scale-[1.02]">
+                                <div
+                                    class="absolute top-0 left-0 right-0 h-8 bg-slate-50/90 border-b border-slate-100 rounded-t-2xl flex items-center px-4 gap-2 z-10">
+                                    <div class="w-3 h-3 rounded-full bg-red-400 shadow-sm"></div>
+                                    <div class="w-3 h-3 rounded-full bg-amber-400 shadow-sm"></div>
+                                    <div class="w-3 h-3 rounded-full bg-emerald-400 shadow-sm"></div>
+
+                                    <div
+                                        class="mx-auto text-[10px] text-slate-400 font-mono tracking-wider font-bold opacity-60">
+                                        Execution_Logic</div>
+                                </div>
+
+                                <div
+                                    class="h-full w-full pt-8 overflow-hidden rounded-xl bg-white flex items-center justify-center">
+                                    <img src="assets/f2.png" alt="Execution Logic"
+                                        class="max-h-full max-w-full object-contain">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="container mx-auto px-16 h-full flex flex-col justify-center">
+                <div class="mb-6 animate-enter">
+                    <h2 class="text-4xl font-bold text-slate-800 mb-2">06 关键创新：生命周期与鲁棒性 (Lifecycle & Robustness)</h2>
+                </div>
+
+                <div
+                    class="relative w-full h-[40%] mb-8 flex items-center justify-center animate-enter delay-100 group">
+                    <div
+                        class="absolute w-2/3 h-full bg-gradient-to-r from-emerald-100 via-amber-100 to-blue-100 rounded-full blur-3xl opacity-50 -z-10 group-hover:opacity-70 transition-opacity duration-700">
+                    </div>
+
+                    <div
+                        class="relative bg-white/80 backdrop-blur-md p-2 rounded-2xl shadow-xl border border-white/50 h-full w-auto aspect-auto max-w-full transform transition-transform duration-500 hover:scale-[1.02]">
+
+                        <div
+                            class="absolute top-0 left-0 right-0 h-8 bg-slate-50/90 border-b border-slate-100 rounded-t-2xl flex items-center px-4 gap-2 z-10">
+                            <div class="w-3 h-3 rounded-full bg-red-400 shadow-sm"></div>
+                            <div class="w-3 h-3 rounded-full bg-amber-400 shadow-sm"></div>
+                            <div class="w-3 h-3 rounded-full bg-emerald-400 shadow-sm"></div>
+
+                            <div
+                                class="mx-auto text-[10px] text-slate-400 font-mono tracking-wider font-bold opacity-60">
+                                Lifecycle_Workflow</div>
+                        </div>
+
+                        <div
+                            class="h-full w-full pt-8 overflow-hidden rounded-xl bg-white flex items-center justify-center">
+                            <img src="assets/f3.png" alt="Workflow" class="max-h-full max-w-full object-contain">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="relative grid grid-cols-3 gap-6 animate-enter delay-200">
+
+                    <!-- Innovation 6: Lifecycle -->
+                    <div
+                        class="glass-card p-5 rounded-xl border-t-4 border-blue-500 relative hover:-translate-y-2 transition-transform duration-300 bg-white/90">
+                        <div class="flex items-center gap-2 mb-3 text-blue-700 font-bold text-lg">
+                            <i class="fa-solid fa-arrows-spin"></i> 全生命周期混合编排
+                        </div>
+                        <div class="text-xs text-slate-600 space-y-2 leading-relaxed">
+                            <p><span class="font-bold text-slate-700">分阶段治理:</span> 启动期信任 <span
+                                    class="bg-blue-50 text-blue-600 px-1 rounded">HyStart++</span> 快速爬升，稳定期移交 AI。</p>
+                            <p><span class="font-bold text-slate-700">无缝软切换:</span> 引入加权融合窗口，消除算法切换震荡。</p>
+                            <div
+                                class="bg-slate-50 p-2 rounded border border-slate-200 text-center font-mono text-[10px] text-slate-500 mt-1">
+                                Rate<sub>final</sub> = α(t)·Rate<sub>Ker</sub> + (1-α)·Rate<sub>AI</sub>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Innovation 4: Engineering -->
+                    <div
+                        class="glass-card p-5 rounded-xl border-t-4 border-emerald-500 relative hover:-translate-y-2 transition-transform duration-300 bg-white/90">
+                        <div class="flex items-center gap-2 mb-3 text-emerald-700 font-bold text-lg">
+                            <i class="fa-solid fa-server"></i> 无锁通道与 EDT 集成
+                        </div>
+                        <div class="text-xs text-slate-600 space-y-2 leading-relaxed">
+                            <p><span class="font-bold text-slate-700">无锁拉取:</span> 采用 <code>Per-CPU Array</code> 替代 Ring
+                                Buffer，吞吐量随核数线性扩展。</p>
+                            <p><span class="font-bold text-slate-700">原生 EDT:</span> 依托 Linux 调度器，eBPF 仅设速率，实现<span
+                                    class="bg-emerald-50 text-emerald-600 px-1 rounded">零阻塞</span>纳秒级发包。</p>
+                        </div>
+                    </div>
+
+                    <!-- Innovation 5: Safety -->
+                    <div
+                        class="glass-card p-5 rounded-xl border-t-4 border-amber-500 relative hover:-translate-y-2 transition-transform duration-300 bg-white/90">
+                        <div class="flex items-center gap-2 mb-3 text-amber-700 font-bold text-lg">
+                            <i class="fa-solid fa-shield-virus"></i> 脊髓反射式熔断
+                        </div>
+                        <div class="text-xs text-slate-600 space-y-2 leading-relaxed">
+                            <p><span class="font-bold text-slate-700">机制:</span> 检测到严重丢包/恢复时，立即<span
+                                    class="bg-amber-50 text-amber-600 px-1 rounded">旁路 (Bypass)</span> AI，执行硬编码降速。</p>
+                            <p><span class="font-bold text-slate-700">价值:</span> 无论 AI 如何失效，兜底机制保障协议栈的工业级鲁棒性。</p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="container mx-auto px-16 h-full flex flex-col justify-center">
+                <h2 class="text-4xl font-bold text-slate-800 mb-10 animate-enter">07 工程实现与可行性 (Engineering &
+                    Feasibility)</h2>
+
+                <div class="grid grid-cols-1 gap-6 max-w-4xl mx-auto w-full">
+                    <div class="glass-card p-6 rounded-xl flex items-center gap-6 animate-enter delay-100">
+                        <div
+                            class="w-16 h-16 rounded-2xl bg-slate-800 flex items-center justify-center text-white text-3xl shadow-lg">
+                            <i class="fa-brands fa-linux"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-xl font-bold text-slate-800">内核集成 (struct_ops)</h4>
+                            <p class="text-gray-600 mt-1">
+                                利用 Linux 5.6+ 特性，无缝替换 TCP 拥塞控制钩子，<span class="text-emerald-600 font-bold">无需 Patch
+                                    内核源码</span>，即插即用。
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="glass-card p-6 rounded-xl flex items-center gap-6 animate-enter delay-200">
+                        <div
+                            class="w-16 h-16 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600 text-3xl">
+                            <i class="fa-solid fa-compress-arrows-alt"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-xl font-bold text-slate-800">对数分桶 (Logarithmic Binning)</h4>
+                            <p class="text-gray-600 mt-1">
+                                利用 <code>bpf_log2()</code> 压缩 RTT 索引，兼顾低延迟精度与广域网覆盖，极大节省 Map 内存占用。
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="glass-card p-6 rounded-xl flex items-center gap-6 animate-enter delay-300">
+                        <div
+                            class="w-16 h-16 rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-600 text-3xl">
+                            <i class="fa-solid fa-feather-alt"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-xl font-bold text-slate-800">极致低开销</h4>
+                            <p class="text-gray-600 mt-1">
+                                单流表仅 512 Bytes，轻松支持 10w+ 并发。使用 Map Polling 替代高开销的 Ring Buffer。
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="container mx-auto px-16 h-full flex flex-col justify-center">
+                <h2 class="text-4xl font-bold text-slate-800 mb-12 animate-enter">08 总结与展望 (Conclusion)</h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16 animate-enter delay-100">
+
+                    <div
+                        class="group relative p-8 bg-white/60 rounded-2xl border border-white/50 shadow-lg hover:shadow-xl hover:bg-white/80 transition-all duration-300">
+                        <div
+                            class="absolute -top-6 left-6 w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 shadow-sm group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-layer-group text-xl"></i>
+                        </div>
+                        <h3 class="mt-4 text-xl font-bold text-slate-700 mb-3">架构解耦</h3>
+                        <p class="text-slate-500 text-sm leading-relaxed">
+                            打破传统束缚，实现 <span class="font-semibold text-blue-600">"慢思考"</span> (用户态 AI 决策) 与 <span
+                                class="font-semibold text-blue-600">"快执行"</span> (内核态 eBPF 调度) 的完美分离。
+                        </p>
+                    </div>
+
+                    <div
+                        class="group relative p-8 bg-white/60 rounded-2xl border border-white/50 shadow-lg hover:shadow-xl hover:bg-white/80 transition-all duration-300">
+                        <div
+                            class="absolute -top-6 left-6 w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600 shadow-sm group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-bolt text-xl"></i>
+                        </div>
+                        <h3 class="mt-4 text-xl font-bold text-slate-700 mb-3">O(1) 极速执行</h3>
+                        <p class="text-slate-500 text-sm leading-relaxed">
+                            拒绝内核浮点运算。通过 <span class="font-semibold text-emerald-600">查表法 (Map-driven)</span>
+                            将复杂的推理转化为纳秒级的内存读取，零额外开销。
+                        </p>
+                    </div>
+
+                    <div
+                        class="group relative p-8 bg-white/60 rounded-2xl border border-white/50 shadow-lg hover:shadow-xl hover:bg-white/80 transition-all duration-300">
+                        <div
+                            class="absolute -top-6 left-6 w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600 shadow-sm group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-shield-halved text-xl"></i>
+                        </div>
+                        <h3 class="mt-4 text-xl font-bold text-slate-700 mb-3">生产级可用</h3>
+                        <p class="text-slate-500 text-sm leading-relaxed">
+                            内置 <span class="font-semibold text-amber-600">"脊髓反射"</span> 熔断机制。即使 AI 失控，底层 eBPF
+                            也能依据物理网络反馈兜底，保障系统不崩。
+                        </p>
+                    </div>
+                </div>
+
+                <div class="animate-enter delay-200 text-center">
+                    <div class="inline-block relative">
+                        <div
+                            class="absolute inset-0 bg-gradient-to-r from-emerald-100 to-blue-100 opacity-50 blur-xl rounded-full">
+                        </div>
+                        <p class="relative text-2xl font-black text-slate-800 tracking-tight z-10">
+                            "Let the Kernel be the ultimate <span
+                                class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-blue-600">Executor</span>."
+                        </p>
+                    </div>
+                    <p class="mt-4 text-slate-400 text-sm font-medium tracking-widest uppercase">
+                        A Robust Foundation for Next-Gen Intelligent Transport
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <div class="flex flex-col items-center justify-center animate-enter h-full">
+                <div class="blob bg-emerald-200 w-96 h-96 opacity-30"></div>
+
+                <i class="fa-solid fa-circle-check text-6xl text-emerald-500 mb-6 animate-bounce"></i>
+                <h1 class="text-6xl font-black text-slate-800 mb-4">谢谢观看</h1>
+                <p class="text-2xl text-gray-500 mb-12 font-light">Q & A</p>
+
+                <button onclick="goToSlide(0)"
+                    class="px-8 py-3 rounded-full border-2 border-emerald-600 text-emerald-600 font-bold hover:bg-emerald-600 hover:text-white transition-colors flex items-center gap-2">
+                    <i class="fa-solid fa-rotate-left"></i> 重新播放
+                </button>
             </div>
         </section>
 

@@ -1,0 +1,1603 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>基于组合优化的全波形反演 (FWI) 观测系统设计</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=Inter:wght@300;400;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- MathJax for LaTeX support -->
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans SC', sans-serif;
+            background-color: #FDFBF7;
+            /* 暖米色背景 */
+            color: #334155;
+            overflow: hidden;
+        }
+
+        /* 幻灯片基础样式 */
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transform: translateX(100px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            box-sizing: border-box;
+            z-index: 0;
+            visibility: hidden;
+        }
+
+        .slide.active {
+            opacity: 1;
+            transform: translateX(0);
+            pointer-events: all;
+            z-index: 10;
+            visibility: visible;
+        }
+
+        .slide.prev {
+            transform: translateX(-100px);
+            opacity: 0;
+        }
+
+        /* 动画与延迟 */
+        .slide.active .animate-enter {
+            animation: slideUpFade 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .delay-100 {
+            animation-delay: 0.1s;
+        }
+
+        .delay-200 {
+            animation-delay: 0.2s;
+        }
+
+        .delay-300 {
+            animation-delay: 0.3s;
+        }
+
+        .delay-400 {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes slideUpFade {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* UI 组件 */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.9);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        }
+
+        .highlight-text {
+            color: #059669;
+            /* Emerald-600 */
+            font-weight: 700;
+            background: rgba(16, 185, 129, 0.1);
+            padding: 0 4px;
+            border-radius: 4px;
+        }
+
+        /* 控制栏 */
+        .control-btn {
+            transition: all 0.2s;
+        }
+
+        .control-btn:hover {
+            background-color: #ecfdf5;
+            color: #059669;
+            transform: scale(1.1);
+        }
+
+        .control-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* 进度条 */
+        .progress-bar {
+            height: 6px;
+            background: #059669;
+            width: 0%;
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* 装饰背景 Blob */
+        .blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: -1;
+            opacity: 0.4;
+        }
+
+        /* 图片占位符样式 */
+        .img-placeholder {
+            background-color: #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #94a3b8;
+            border-radius: 0.75rem;
+            position: relative;
+            overflow: hidden;
+            border: 2px dashed #cbd5e1;
+            transition: all 0.3s ease;
+        }
+
+        .img-placeholder:hover {
+            border-color: #10b981;
+            background-color: #f0fdf4;
+            color: #10b981;
+        }
+
+        /* 全屏时隐藏底部导航 */
+        html:fullscreen #bottom-nav,
+        html:fullscreen #progress-container {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body class="h-screen w-screen relative">
+
+    <!-- 底部控制栏 -->
+    <div id="bottom-nav"
+        class="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 flex flex-col items-center gap-2 w-full pointer-events-none">
+        <div
+            class="flex items-center gap-6 px-6 py-3 bg-white/90 rounded-full shadow-xl border border-gray-200 backdrop-blur-md pointer-events-auto">
+            <button onclick="prevSlide()"
+                class="control-btn w-10 h-10 rounded-full flex items-center justify-center text-gray-500 text-lg"
+                title="上一页">
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
+
+            <span class="text-sm font-mono text-gray-500 w-20 text-center select-none font-bold">
+                <span id="current-slide">1</span> / <span id="total-slides">13</span>
+            </span>
+
+            <button onclick="nextSlide()"
+                class="control-btn w-10 h-10 rounded-full flex items-center justify-center text-gray-500 text-lg"
+                title="下一页">
+                <i class="fa-solid fa-arrow-right"></i>
+            </button>
+
+            <div class="w-px h-6 bg-gray-300 mx-2"></div>
+
+            <button onclick="toggleFullScreen()"
+                class="control-btn w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:text-emerald-600"
+                title="全屏">
+                <i class="fa-solid fa-expand" id="fs-icon"></i>
+            </button>
+        </div>
+        <div class="text-[10px] text-gray-400 font-mono opacity-60">← → 键切换</div>
+    </div>
+
+    <div id="progress-container" class="fixed bottom-0 left-0 w-full h-1.5 bg-gray-200 z-50">
+        <div class="progress-bar" id="progress"></div>
+    </div>
+
+    <main id="presentation-container" class="w-full h-full relative overflow-hidden">
+
+        <!-- Slide 1: 封面 -->
+        <section class="slide active">
+            <!-- 保持原有的背景装饰 -->
+            <div class="blob bg-emerald-300 w-96 h-96 top-[-10%] right-[-10%]"></div>
+            <div class="blob bg-blue-200 w-80 h-80 bottom-[-10%] left-[-10%]"></div>
+
+            <div class="text-center max-w-5xl animate-enter">
+                <div
+                    class="inline-block px-4 py-2 rounded-full bg-emerald-100 text-emerald-800 text-sm font-bold tracking-wider mb-6 shadow-sm border border-emerald-200">
+                    <i class="fa-solid fa-layer-group mr-2"></i>Combinatorial Optimization Project
+                </div>
+                <h1 class="text-4xl md:text-6xl font-black text-slate-800 leading-tight mb-4 tracking-tight">
+                    基于组合优化的<br>
+                    全波反演 (FWI) 观测系统设计
+                </h1>
+                <p class="text-xl text-emerald-700 font-bold mb-10 tracking-wide mt-6">
+                    —— 利用惰性贪心策略寻找最优震源布局
+                </p>
+
+                <!-- 信息卡片 -->
+                <div
+                    class="grid grid-cols-3 gap-4 text-center max-w-2xl mx-auto text-sm text-gray-600 bg-white/50 p-6 rounded-xl border border-gray-100 delay-200 animate-enter">
+                    <div>
+                        <p class="text-xs text-gray-400 uppercase">汇报人</p>
+                        <p class="font-bold text-gray-800 text-lg mt-1"><i
+                                class="fa-solid fa-user text-emerald-500 mr-2"></i>高博 李子豪</p>
+                    </div>
+                    <div class="border-l border-gray-200">
+                        <p class="text-xs text-gray-400 uppercase">课程</p>
+                        <p class="font-bold text-gray-800 text-lg mt-1">组合优化</p>
+                    </div>
+                    <div class="border-l border-gray-200">
+                        <p class="text-xs text-gray-400 uppercase">日期</p>
+                        <p class="font-bold text-gray-800 text-lg mt-1 font-mono">2025.12.17</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 2: 问题背景 (Refactored) -->
+        <section class="slide">
+            <div class="container mx-auto px-12 h-full flex flex-col justify-center">
+                <!-- Header -->
+                <div class="mb-10 animate-enter text-center">
+                    <h2 class="text-4xl font-bold text-slate-800 mb-3">01 问题背景 (Motivation)</h2>
+                    <p class="text-gray-500 text-lg">从全波形反演 (FWI) 的成本瓶颈到组合优化问题</p>
+                </div>
+
+                <div class="grid grid-cols-3 gap-8 h-auto items-stretch">
+
+                    <!-- 1. Context: FWI Value -->
+                    <div
+                        class="glass-card p-6 rounded-2xl border-t-4 border-emerald-500 animate-enter delay-100 flex flex-col relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300">
+                        <div class="absolute -right-4 -top-4 w-24 h-24 bg-emerald-50 rounded-full z-0"></div>
+                        <div class="z-10 relative">
+                            <div
+                                class="w-12 h-12 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl mb-4">
+                                <i class="fa-solid fa-earth-americas"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-slate-800 mb-2">全波形反演 (FWI)</h3>
+                            <p class="text-sm text-slate-500 font-bold mb-4 uppercase tracking-wider">High Precision
+                                Imaging</p>
+                            <p class="text-slate-600 leading-relaxed text-sm mb-4 flex-grow">
+                                利用完整的地震波形信息重建地下精细速度模型，是目前精度最高的成像技术之一。
+                            </p>
+                            <div class="bg-emerald-50/50 rounded-lg p-3 border border-emerald-100">
+                                <div class="flex items-center gap-2 text-sm text-emerald-800 font-bold">
+                                    <i class="fa-solid fa-check-circle"></i> 优势
+                                </div>
+                                <p class="text-xs text-emerald-700 mt-1">清晰刻画复杂地质构造与岩性变化。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. Conflict: The Bottleneck -->
+                    <div
+                        class="glass-card p-6 rounded-2xl border-t-4 border-red-500 animate-enter delay-200 flex flex-col relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300">
+                        <div class="absolute -right-4 -top-4 w-24 h-24 bg-red-50 rounded-full z-0"></div>
+                        <div class="z-10 relative">
+                            <div
+                                class="w-12 h-12 rounded-lg bg-red-100 text-red-600 flex items-center justify-center text-xl mb-4">
+                                <i class="fa-solid fa-hand-holding-dollar"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-slate-800 mb-2">采集成本瓶颈</h3>
+                            <p class="text-sm text-slate-500 font-bold mb-4 uppercase tracking-wider">Cost vs. Accuracy
+                            </p>
+
+                            <div class="space-y-4 flex-grow">
+                                <!-- Ideal -->
+                                <div class="relative pl-4 border-l-2 border-gray-200">
+                                    <h4 class="text-xs text-gray-400 uppercase font-bold">Ideal</h4>
+                                    <p class="text-sm text-slate-600">密集采集 <i
+                                            class="fa-solid fa-arrow-right text-gray-400 mx-1"></i> 完美成像</p>
+                                </div>
+                                <!-- Reality -->
+                                <div class="relative pl-4 border-l-2 border-red-400">
+                                    <h4 class="text-xs text-red-500 uppercase font-bold">Reality</h4>
+                                    <p class="text-sm text-slate-700 font-bold">资源受限</p>
+                                    <p class="text-xs text-slate-500 mt-1">海上节点/震源部署极其昂贵且耗时。</p>
+                                </div>
+                            </div>
+
+                            <div class="mt-4 bg-red-50 rounded-lg p-3 text-center border border-red-100">
+                                <span class="text-red-700 font-bold text-sm">无法全覆盖观测</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. Goal: Optimization -->
+                    <div
+                        class="glass-card p-6 rounded-2xl border-t-4 border-indigo-500 animate-enter delay-300 flex flex-col relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300">
+                        <div class="absolute -right-4 -top-4 w-24 h-24 bg-indigo-50 rounded-full z-0"></div>
+                        <div class="z-10 relative h-full flex flex-col">
+                            <div
+                                class="w-12 h-12 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl mb-4">
+                                <i class="fa-solid fa-bullseye"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-slate-800 mb-2">观测系统设计</h3>
+                            <p class="text-sm text-slate-500 font-bold mb-4 uppercase tracking-wider">The Solution</p>
+
+                            <p class="text-slate-600 leading-relaxed text-sm mb-6">
+                                在预算约束下，智能优选最具价值的观测位置。
+                            </p>
+
+                            <!-- N -> K Visual -->
+                            <div class="mt-auto bg-white/60 rounded-xl p-4 border border-indigo-100">
+                                <div class="flex items-center justify-between text-center mb-2">
+                                    <div>
+                                        <div class="text-xl font-black text-slate-300">N</div>
+                                        <div class="text-[10px] text-slate-400 uppercase">Candidates</div>
+                                    </div>
+                                    <i class="fa-solid fa-filter text-indigo-400"></i>
+                                    <div>
+                                        <div class="text-xl font-black text-emerald-600">K</div>
+                                        <div class="text-[10px] text-emerald-600 font-bold uppercase">Optimal</div>
+                                    </div>
+                                </div>
+                                <div class="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
+                                    <div class="bg-indigo-500 h-full w-[20%]"></div>
+                                </div>
+                                <p class="text-center text-[10px] text-slate-400 mt-2">K ≪ N (Sparse Design)</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Bottom Summary Sentence -->
+                <div class="mt-10 text-center animate-enter delay-400">
+                    <p class="text-slate-600 text-lg font-light">
+                        <i class="fa-solid fa-quote-left text-slate-300 mr-2"></i>
+                        核心问题：如何在 <span class="font-bold text-indigo-600">有限预算 (K)</span> 下，最大化 <span
+                            class="font-bold text-emerald-600">成像质量</span>？
+                        <i class="fa-solid fa-quote-right text-slate-300 ml-2"></i>
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 3: 数学建模 (Refactored) -->
+        <section class="slide">
+            <div class="container mx-auto px-16 h-full flex flex-col justify-center">
+                <div class="mb-10 animate-enter text-center">
+                    <h2 class="text-4xl font-bold text-slate-800 mb-3">02 数学建模 (Problem Formulation)</h2>
+                    <p class="text-gray-500 text-lg">将观测系统设计转化为整数规划问题</p>
+                </div>
+
+                <!-- Main Content Wrapper -->
+                <div class="flex flex-col gap-8">
+
+                    <!-- Formula Section (Central & Prominent) -->
+                    <div
+                        class="glass-card p-10 rounded-2xl border-t-4 border-emerald-500 shadow-lg animate-enter delay-100 relative overflow-hidden group">
+                        <!-- Decorative background elements -->
+                        <div
+                            class="absolute -right-10 -top-10 text-9xl text-emerald-50 opacity-20 font-serif italic pointer-events-none select-none">
+                            f(x)</div>
+                        <div class="blob bg-emerald-100 w-64 h-64 bottom-[-20%] left-[-10%] opacity-20"></div>
+
+                        <div class="flex flex-col items-center justify-center relative z-10">
+                            <!-- Objective -->
+                            <div
+                                class="bg-white/80 backdrop-blur-md px-14 py-8 rounded-2xl border border-emerald-100 shadow-md mb-8 transform group-hover:scale-105 transition-transform duration-300">
+                                <span
+                                    class="text-3xl md:text-5xl font-serif text-slate-800 leading-relaxed tracking-wide">
+                                    <span class="font-bold text-emerald-700">max</span>
+                                    <sub class="text-lg text-gray-400 font-sans mx-2 italic">w</sub>
+                                    <span class="italic font-medium">log det</span>
+                                    <span class="text-slate-400 mx-1">(</span>
+                                    <span class="inline-block relative">
+                                        &sum;<sub class="text-sm absolute -bottom-2 -right-1 text-gray-400">i</sub>
+                                        <span class="text-blue-600 font-bold mx-1">w<sub>i</sub></span>
+                                        <span class="text-amber-600 font-bold">F<sub>i</sub></span>
+                                    </span>
+                                    <span class="text-gray-300 mx-2">+</span>
+                                    <span class="text-gray-400">&epsilon;I</span>
+                                    <span class="text-slate-400 mx-1">)</span>
+                                </span>
+                            </div>
+
+                            <!-- Constraints Line -->
+                            <div
+                                class="flex items-center gap-10 text-lg text-slate-600 font-mono bg-slate-50/80 px-8 py-3 rounded-full border border-slate-200">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Subject
+                                        to</span>
+                                </div>
+                                <div class="w-px h-6 bg-gray-300"></div>
+                                <div>
+                                    &sum; w<sub>i</sub> = <span class="text-purple-600 font-bold">K</span>
+                                </div>
+                                <div class="w-px h-6 bg-gray-300"></div>
+                                <div>
+                                    w<sub>i</sub> &in; {0, 1}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Variable Explanations Grid -->
+                    <div class="grid grid-cols-4 gap-6 animate-enter delay-200">
+
+                        <!-- Variable: w -->
+                        <div
+                            class="glass-card p-5 rounded-xl border-l-4 border-blue-500 hover:bg-white/90 transition-colors group">
+                            <div class="flex items-center gap-3 mb-3">
+                                <div
+                                    class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 font-bold font-mono text-xl group-hover:scale-110 transition-transform">
+                                    w</div>
+                                <div class="text-sm font-bold text-slate-700">决策变量</div>
+                            </div>
+                            <p class="text-xs text-slate-500 leading-relaxed">
+                                二值选择向量。<br>
+                                <span class="text-blue-600 font-bold bg-blue-50 px-1 rounded">1</span> : 选中该位置<br>
+                                <span class="text-slate-400 font-bold bg-gray-50 px-1 rounded">0</span> : 舍弃
+                            </p>
+                        </div>
+
+                        <!-- Variable: F -->
+                        <div
+                            class="glass-card p-5 rounded-xl border-l-4 border-amber-500 hover:bg-white/90 transition-colors group">
+                            <div class="flex items-center gap-3 mb-3">
+                                <div
+                                    class="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600 font-bold font-serif text-xl group-hover:scale-110 transition-transform">
+                                    F<sub>i</sub></div>
+                                <div class="text-sm font-bold text-slate-700">信息矩阵</div>
+                            </div>
+                            <p class="text-xs text-slate-500 leading-relaxed">
+                                候选点 <span class="font-mono">i</span> 的<br>
+                                <span class="font-bold text-amber-700">Fisher Information Matrix</span>。<br>
+                                量化该点提供的梯度信息。
+                            </p>
+                        </div>
+
+                        <!-- Variable: K -->
+                        <div
+                            class="glass-card p-5 rounded-xl border-l-4 border-purple-500 hover:bg-white/90 transition-colors group">
+                            <div class="flex items-center gap-3 mb-3">
+                                <div
+                                    class="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center text-purple-600 font-bold font-mono text-xl group-hover:scale-110 transition-transform">
+                                    K</div>
+                                <div class="text-sm font-bold text-slate-700">预算约束</div>
+                            </div>
+                            <p class="text-xs text-slate-500 leading-relaxed">
+                                允许选择的最大震源数量。<br>
+                                强制稀疏性约束 <span class="font-mono bg-purple-50 px-1 rounded text-purple-700">K ≪ N</span>。
+                            </p>
+                        </div>
+
+                        <!-- Variable: Objective -->
+                        <div
+                            class="glass-card p-5 rounded-xl border-l-4 border-emerald-500 hover:bg-white/90 transition-colors group">
+                            <div class="flex items-center gap-3 mb-3">
+                                <div
+                                    class="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 font-bold text-lg group-hover:scale-110 transition-transform">
+                                    <i class="fa-solid fa-arrow-trend-up"></i>
+                                </div>
+                                <div class="text-sm font-bold text-slate-700">优化目标</div>
+                            </div>
+                            <p class="text-xs text-slate-500 leading-relaxed">
+                                <span class="font-bold text-emerald-700">D-Optimality</span><br>
+                                最大化行列式 = 对地下结构推理的误差最小。
+                            </p>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 4: 问题的核心性质 (Refactored) -->
+        <section class="slide">
+            <div class="container mx-auto px-16 h-full flex flex-col justify-center">
+                <div class="mb-10 animate-enter text-center">
+                    <h2 class="text-4xl font-bold text-slate-800 mb-3">03 问题的核心性质与设计理念<br> (Submodularity and Design)
+                    </h2>
+                    <p class="text-gray-500 text-lg">子模性：破解组合爆炸的关键钥匙</p>
+                </div>
+
+                <div class="grid grid-cols-12 gap-8 items-stretch">
+
+                    <!-- Left: The Challenge (Hard Problem) -->
+                    <div class="col-span-4 animate-enter delay-100 flex flex-col">
+                        <div
+                            class="glass-card p-8 rounded-2xl border-l-4 border-red-500 bg-red-50/30 h-full flex flex-col justify-between relative overflow-hidden group">
+                            <!-- Background Decoration -->
+                            <div
+                                class="absolute -right-6 -bottom-6 text-red-100/80 text-9xl group-hover:scale-110 transition-transform duration-500">
+                                <i class="fa-solid fa-bomb"></i>
+                            </div>
+
+                            <div>
+                                <h3 class="text-xl font-bold text-red-800 mb-6 flex items-center">
+                                    <div
+                                        class="w-8 h-8 rounded bg-red-100 flex items-center justify-center mr-3 text-red-500">
+                                        <i class="fa-solid fa-triangle-exclamation"></i>
+                                    </div>
+                                    基于复杂度的考量
+                                </h3>
+
+                                <p class="text-slate-700 font-bold text-lg mb-2">NP-Hard 组合优化问题</p>
+                                <p class="text-slate-600 text-sm leading-relaxed mb-6">
+                                    从 N 个候选点中选择 K 个，解空间呈爆炸式增长，穷举法完全失效。
+                                </p>
+                                <p class="text-slate-600 text-sm leading-relaxed mb-2">
+                                    <span class="font-bold">决策：</span> 必须寻求<span class="font-bold">近似算法 (Approximation
+                                        Algorithm)</span>以在多项式时间内获得可行解。
+                                </p>
+                            </div>
+
+                            <div
+                                class="bg-white/80 p-5 rounded-xl text-center border border-red-100 shadow-sm relative z-10">
+                                <p class="text-[10px] text-red-400 uppercase font-bold tracking-widest mb-2">Search
+                                    Space Size</p>
+                                <span class="text-4xl font-serif font-bold text-slate-800">
+                                    \(\binom{N}{K}\)
+                                </span>
+                                <p class="text-xs text-red-500 font-bold mt-2">Exponential Growth</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: The Breakthrough (Submodularity) -->
+                    <div class="col-span-8 animate-enter delay-200 flex flex-col gap-6">
+
+                        <!-- Top: Definition & Diminishing Returns -->
+                        <div class="glass-card p-8 rounded-2xl border-l-4 border-emerald-500 relative overflow-hidden">
+                            <div class="absolute top-0 right-0 p-6 opacity-10 text-emerald-800 text-8xl"><i
+                                    class="fa-solid fa-layer-group"></i></div>
+
+                            <h3 class="text-xl font-bold text-emerald-800 mb-6 flex items-center">
+                                <div
+                                    class="w-8 h-8 rounded bg-emerald-100 flex items-center justify-center mr-3 text-emerald-500">
+                                    <i class="fa-solid fa-key"></i>
+                                </div>
+                                基于问题结构的利用：子模性
+                            </h3>
+
+                            <div class="grid grid-cols-2 gap-8">
+                                <div>
+                                    <div class="bg-emerald-50/50 p-4 rounded-lg border border-emerald-100 mb-4">
+                                        <p class="text-xs text-emerald-600 font-bold uppercase mb-1">Target Function</p>
+                                        <p class="font-serif text-lg text-slate-800">
+                                            \( f(S) = \log \det (\mathbf{F}_S) \)
+                                        </p>
+                                    </div>
+                                    <p class="text-sm text-slate-600 leading-relaxed">
+                                        目标函数被证明是<span class="font-bold text-emerald-700">单调子模函数</span> (Monotone
+                                        Submodular Function)。
+                                        </p>
+                                        <p class="text-sm text-slate-600 leading-relaxed mt-1">
+                                            <span class="font-bold">决策：</span> 这种特定结构是使用<span class="font-bold">贪心算法</span>的最佳场景。
+                                    </p>
+                                </div>
+
+                                <!-- Diminishing Returns Visualization -->
+                                <div class="bg-white/40 p-4 rounded-xl border border-white/60">
+                                    <h4 class="font-bold text-slate-700 text-xs mb-3 flex items-center">
+                                        <i class="fa-solid fa-chart-simple mr-2 text-emerald-500"></i>
+                                        收益递减 (Diminishing Returns)
+                                    </h4>
+                                    <!-- Simple bar chart CSS -->
+                                    <div class="flex items-end gap-1 h-20 border-b border-gray-300 pb-0.5 px-2">
+                                        <div class="w-1/6 bg-emerald-400 h-[90%] rounded-t opacity-100"></div>
+                                        <div class="w-1/6 bg-emerald-400 h-[65%] rounded-t opacity-90"></div>
+                                        <div class="w-1/6 bg-emerald-400 h-[45%] rounded-t opacity-80"></div>
+                                        <div class="w-1/6 bg-emerald-400 h-[30%] rounded-t opacity-70"></div>
+                                        <div class="w-1/6 bg-emerald-400 h-[18%] rounded-t opacity-60"></div>
+                                        <div class="w-1/6 bg-emerald-400 h-[10%] rounded-t opacity-50"></div>
+                                    </div>
+                                    <p class="text-[10px] text-slate-500 mt-2 leading-tight">
+                                        随着震源数量增加，新震源带来的边际信息增益逐渐减少。
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bottom: Significance -->
+                        <div
+                            class="glass-card p-6 rounded-2xl border-l-4 border-amber-500 bg-amber-50/30 flex items-center justify-between">
+                            <div class="flex items-center gap-4">
+                                <div
+                                    class="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-xl shrink-0">
+                                    <i class="fa-solid fa-lightbulb"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-slate-800 mb-1">算法选择</h4>
+                                    <p class="text-sm text-slate-600">
+                                        我们最终选择<span class="font-bold text-amber-700">惰性贪心算法</span>，子模性保证了贪心算法的高效性，并提供了<span class="font-bold text-amber-700">理论最优下界</span>。
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="text-2xl font-bold text-amber-600/20">
+                                <i class="fa-solid fa-certificate"></i>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- Slide 5: 证明NP-Hard问题 -->
+        <section class="slide">
+            <div class="container mx-auto px-8 md:px-16 h-full flex flex-col justify-center">
+                <div class="mb-8 animate-enter text-center">
+                    <h2 class="text-3xl md:text-4xl font-bold text-slate-800 mb-2">04 问题规约 (Problem Reduction)</h2>
+                    <p class="text-gray-500 text-base md:text-lg">从物理光照到最大覆盖问题：揭示计算复杂度的根源</p>
+                </div>
+
+                <div class="flex flex-col gap-6">
+
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-stretch relative">
+
+                        <div class="md:col-span-5 h-full animate-enter delay-100">
+                            <div
+                                class="glass-card h-full p-6 rounded-2xl border-t-4 border-blue-500 flex flex-col hover:shadow-lg transition-shadow duration-300 bg-white/60">
+                                <div class="flex items-center gap-3 mb-5 border-b border-blue-100 pb-3">
+                                    <div
+                                        class="w-10 h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center text-lg shrink-0">
+                                        <i class="fa-solid fa-earth-americas"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-lg font-bold text-slate-800 leading-tight">物理世界 (Physics)</h3>
+                                        <p class="text-[10px] text-blue-500 font-bold uppercase tracking-wider">Seismic
+                                            Illumination</p>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-5 flex-grow">
+                                    <div class="flex gap-3 items-start">
+                                        <span
+                                            class="text-xs font-bold text-blue-600 uppercase w-12 shrink-0 pt-1 text-right">全空间</span>
+                                        <p class="text-sm text-slate-600 leading-snug">
+                                            地下所有的网格点
+                                        </p>
+                                    </div>
+                                    <div class="flex gap-3 items-start">
+                                        <span
+                                            class="text-xs font-bold text-blue-600 uppercase w-12 shrink-0 pt-1 text-right">单震源</span>
+                                        <p class="text-sm text-slate-600 leading-snug">
+                                            第 <span class="font-serif italic font-bold text-slate-800">i</span>
+                                            个震源激发的波场能有效“照亮”的区域。
+                                        </p>
+                                    </div>
+                                    <div class="flex gap-3 items-start">
+                                        <span
+                                            class="text-xs font-bold text-blue-600 uppercase w-12 shrink-0 pt-1 text-right">目
+                                            标</span>
+                                        <p class="text-sm text-slate-600 leading-snug">
+                                            在有限震源数下，尽可能覆盖更多的地下网格。
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div
+                            class="md:col-span-2 flex flex-col justify-center items-center py-4 md:py-0 animate-enter delay-300 z-10 relative">
+                            <div class="absolute w-full h-px bg-slate-200 top-1/2 left-0 -z-10 hidden md:block"></div>
+
+                            <div
+                                class="bg-white p-3 rounded-full shadow-lg border border-slate-200 flex flex-col items-center justify-center w-16 h-16 group hover:scale-110 transition-transform duration-300">
+                                <span
+                                    class="text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Map</span>
+                                <i
+                                    class="fa-solid fa-arrow-right-arrow-left text-slate-500 text-xl group-hover:text-indigo-500 transition-colors"></i>
+                            </div>
+                        </div>
+
+                        <div class="md:col-span-5 h-full animate-enter delay-200">
+                            <div
+                                class="glass-card h-full p-6 rounded-2xl border-t-4 border-purple-500 flex flex-col hover:shadow-lg transition-shadow duration-300 bg-white/60">
+                                <div class="flex items-center gap-3 mb-5 border-b border-purple-100 pb-3">
+                                    <div
+                                        class="w-10 h-10 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center text-lg shrink-0">
+                                        <i class="fa-solid fa-calculator"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-lg font-bold text-slate-800 leading-tight">数学抽象 (Set Theory)
+                                        </h3>
+                                        <p class="text-[10px] text-purple-500 font-bold uppercase tracking-wider">Max
+                                            Coverage Problem</p>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-5 flex-grow">
+                                    <div class="flex gap-3 items-start">
+                                        <div class="w-12 shrink-0 text-right pt-0.5">
+                                            <span class="font-serif italic font-bold text-slate-800 text-lg">U</span>
+                                        </div>
+                                        <p class="text-sm text-slate-600 leading-snug">
+                                            全集 (Universe) <br><span class="text-slate-400 text-xs">Elements = Grid
+                                                Points</span>
+                                        </p>
+                                    </div>
+                                    <div class="flex gap-3 items-start">
+                                        <div class="w-12 shrink-0 text-right pt-0.5">
+                                            <span
+                                                class="font-serif italic font-bold text-purple-600 text-lg">S<sub>i</sub></span>
+                                        </div>
+                                        <p class="text-sm text-slate-600 leading-snug">
+                                            子集 (Subset) <br><span class="text-slate-400 text-xs">Subset associated with
+                                                Source <span class="font-serif italic">i</span></span>
+                                        </p>
+                                    </div>
+
+                                    <div
+                                        class="mt-4 bg-purple-50/60 rounded-xl py-4 border border-purple-100 flex justify-center items-center">
+
+                                        <div class="font-serif text-slate-800 flex items-center gap-4">
+
+                                            <span class="text-xl italic">max</span>
+
+                                            <div class="flex items-center gap-1">
+                                                <span class="text-4xl font-light text-slate-400 scale-y-110">|</span>
+
+                                                <div class="flex flex-col items-center justify-center mx-1">
+                                                    <span
+                                                        class="text-2xl leading-none font-sans text-slate-700">&cup;</span>
+                                                    <span class="text-[10px] text-slate-500 italic font-serif -mt-0.5">i
+                                                        &in; S</span>
+                                                </div>
+
+                                                <span
+                                                    class="text-2xl font-bold text-purple-700 italic">S<sub>i</sub></span>
+
+                                                <span class="text-4xl font-light text-slate-400 scale-y-110">|</span>
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="animate-enter delay-400 mt-2">
+                        <div
+                            class="bg-gradient-to-r from-red-50 to-white rounded-xl p-4 border border-red-100 flex flex-col md:flex-row items-center gap-6 shadow-sm">
+                            <div
+                                class="flex flex-row md:flex-col items-center gap-3 md:gap-1 px-4 md:border-r border-red-100 shrink-0">
+                                <div class="text-2xl text-red-500"><i class="fa-solid fa-gavel"></i></div>
+                                <div class="text-[10px] font-bold text-red-400 uppercase tracking-widest">Verdict</div>
+                            </div>
+
+                            <div class="flex-grow text-center md:text-left">
+                                <h4 class="text-red-900 font-bold text-base mb-1">为什么这是 NP-Hard 问题？</h4>
+                                <p class="text-slate-600 text-sm leading-relaxed">
+                                    这是一个经典的归约证明：<span class="font-bold text-slate-800">最大覆盖问题 (MCP)</span> 已知是 NP-Hard
+                                    的。
+                                    我们的问题在特例下等价于 MCP，因此其通用形式必然也是 NP-Hard。
+                                </p>
+                            </div>
+
+                            <div class="shrink-0">
+                                <div
+                                    class="bg-white px-6 py-2 rounded-lg border border-red-200 shadow-sm text-center min-w-[120px]">
+                                    <span
+                                        class="block text-[10px] text-slate-400 uppercase font-bold mb-0.5">Complexity</span>
+                                    <span class="block text-xl font-black text-red-600 tracking-tight">NP-Hard</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 6: 求解算法 (Lazy Greedy Logic) -->
+        <section class="slide">
+            <div class="container mx-auto px-12 h-full flex flex-col justify-center">
+                <div class="mb-8 animate-enter text-center">
+                    <h2 class="text-4xl font-bold text-slate-800 mb-2">05 求解算法 (Lazy Greedy)</h2>
+                    <p class="text-gray-500 text-lg">利用边际增益递减特性实现极速求解</p>
+                </div>
+
+                <div class="grid grid-cols-12 gap-10 h-auto items-center">
+
+                    <!-- Left: Mac Style Code Block (Light Theme) -->
+                    <div class="col-span-6 animate-enter delay-100">
+                        <div
+                            class="glass-card p-0 rounded-xl border border-gray-200 overflow-hidden shadow-xl bg-white">
+                            <!-- Title Bar -->
+                            <div
+                                class="bg-gray-100 px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                                <div class="flex gap-2">
+                                    <div class="w-3 h-3 rounded-full bg-[#ff5f56] border border-[#e0443e]"></div>
+                                    <div class="w-3 h-3 rounded-full bg-[#ffbd2e] border border-[#dea123]"></div>
+                                    <div class="w-3 h-3 rounded-full bg-[#27c93f] border border-[#1aab29]"></div>
+                                </div>
+                                <span class="text-xs font-mono text-gray-500 font-bold">lazy_greedy.py</span>
+                                <div class="w-10"></div> <!-- Spacer -->
+                            </div>
+
+                            <!-- Code -->
+                            <div
+                                class="p-6 font-mono text-xs md:text-sm leading-relaxed text-slate-800 overflow-x-auto bg-white">
+                                <pre><code><span class="text-purple-600 font-bold">while</span> <span class="text-slate-500">len</span>(selected) < <span class="text-emerald-600 font-bold">K</span>:
+    <span class="text-slate-400 italic"># 1. 取出期望值最高的候选点 (Max-Heap)</span>
+    candidate = queue.pop_top() 
+    
+    <span class="text-purple-600 font-bold">if</span> candidate.is_stale:
+        <span class="text-slate-400 italic"># 2. 重新计算真实增益 (昂贵操作)</span>
+        candidate.gain = recompute(candidate)
+        candidate.is_stale = <span class="text-blue-600 font-bold">False</span>
+        
+        <span class="text-slate-400 italic"># 3. Look Ahead 检查</span>
+        top_of_queue = queue.peek() 
+        
+        <span class="text-purple-600 font-bold">if</span> candidate.gain >= top_of_queue.gain:
+            <span class="text-slate-400 italic"># 即使重算也是第一 -> 选中</span>
+            select(candidate)
+        <span class="text-purple-600 font-bold">else</span>:
+            <span class="text-slate-400 italic"># 比第二名的上限还小 -> 放回队列重排</span>
+            queue.push(candidate) 
+            <span class="text-slate-400 italic"># 循环继续，下一次考察原第二名</span>
+    <span class="text-purple-600 font-bold">else</span>:
+        <span class="text-slate-400 italic"># 已经是新鲜值 -> 直接选中</span>
+        select(candidate)</code></pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Core Concept & Complexity -->
+                    <div class="col-span-6 animate-enter delay-200 flex flex-col gap-6">
+
+                        <!-- Core Logic Card -->
+                        <div class="glass-card p-6 rounded-2xl border-l-4 border-blue-500">
+                            <h4 class="font-bold text-blue-800 mb-3 flex items-center text-lg">
+                                <i class="fa-solid fa-lightbulb mr-3"></i> 核心逻辑
+                            </h4>
+                            <ul class="space-y-4 text-slate-600 text-sm">
+                                <li class="flex items-start">
+                                    <i class="fa-solid fa-check text-blue-500 mt-1 mr-3"></i>
+                                    <div>
+                                        <span class="font-bold text-slate-800">增益上限性质：</span>
+                                        <p>队列中的“旧增益”永远是真实增益的<span class="font-bold text-amber-600">上限 (Upper
+                                                Bound)</span>。</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fa-solid fa-check text-blue-500 mt-1 mr-3"></i>
+                                    <div>
+                                        <span class="font-bold text-slate-800">懒惰计算 (Lazy Evaluation)：</span>
+                                        <p>只有当“第一名”的地位受到威胁时，才重新计算它的真实价值。</p>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- Complexity Analysis Card -->
+                        <div
+                            class="glass-card p-5 rounded-2xl border-t-4 border-emerald-500 bg-white shadow-md relative overflow-hidden flex flex-col justify-center h-full">
+                            <div class="absolute -right-6 -bottom-6 text-emerald-50 text-8xl pointer-events-none"><i
+                                    class="fa-solid fa-chart-line"></i></div>
+
+                            <h4 class="font-bold text-slate-800 mb-3 flex items-center gap-2 text-base">
+                                <i class="fa-solid fa-function text-emerald-500"></i> 时间复杂度
+                            </h4>
+
+                            <div class="space-y-3 relative z-10 text-sm">
+                                <p class="text-xs text-slate-500">
+                                    令 <span class="font-mono font-bold">Cost</span> 为单次目标函数评估耗时（最耗时部分）。
+                                </p>
+
+                                <!-- Standard Greedy -->
+                                <div class="bg-red-50/80 p-3 rounded-lg border border-red-100">
+                                    <div class="flex justify-between items-center mb-1">
+                                        <span class="text-red-700 font-bold text-xs">Standard Greedy</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="font-mono text-red-600 font-bold text-sm">\( \mathcal{O}(K \cdot N
+                                            \cdot \text{Cost}) \)</span>
+                                    </div>
+                                    <p class="text-[10px] text-red-500/80 leading-tight">
+                                        每一轮都要重新计算剩余所有 \(N\) 个候选点的增益。计算量巨大。
+                                    </p>
+                                </div>
+
+                                <!-- Lazy Greedy -->
+                                <div class="bg-emerald-50/80 p-3 rounded-lg border border-emerald-100">
+                                    <div class="flex justify-between items-center mb-1">
+                                        <span class="text-emerald-700 font-bold text-xs">Lazy Greedy</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="font-mono text-emerald-600 font-bold text-sm">\( \mathcal{O}(N
+                                            \cdot \text{Cost} + K \cdot \bar{n} \cdot \text{Cost}) \)</span>
+                                    </div>
+                                    <p class="text-[10px] text-emerald-600/80 leading-tight">
+                                        仅初始化需 \(N\) 次计算。后续每轮平均仅需重算 \(\bar{n}\) 个点 (\(\bar{n} \ll N\))。
+                                    </p>
+                                </div>
+
+                                <div class="text-center">
+                                    <span class="text-xs font-bold text-slate-400">实测差异：</span>
+                                    <span class="font-mono font-bold text-slate-600 text-xs">\( K \cdot N \gg N + K
+                                        \cdot \bar{n} \)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 7: 算法执行示例 (Example Flow) -->
+        <section class="slide">
+            <div class="container mx-auto px-12 h-full flex flex-col justify-center">
+                <div class="mb-8 animate-enter text-center">
+                    <h2 class="text-4xl font-bold text-slate-800 mb-2">06 算法执行示例 (Example Process)</h2>
+                    <p class="text-gray-500 text-lg">Lazy Greedy 如何通过重新排序找到真正的最优解</p>
+                </div>
+
+                <div class="grid grid-cols-3 gap-6 animate-enter delay-100 items-start">
+
+                    <!-- Round 1: A fails -->
+                    <div
+                        class="glass-card p-5 rounded-xl border border-gray-200 relative group hover:border-red-300 transition-colors">
+                        <div
+                            class="absolute -top-3 -left-3 w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center font-bold text-slate-600 border border-white shadow-sm">
+                            1</div>
+                        <h4 class="text-center font-bold text-slate-700 mb-4 pb-2 border-b border-gray-100">第一轮：考察 A
+                        </h4>
+
+                        <!-- Queue State -->
+                        <div class="space-y-2 mb-4 text-sm">
+                            <div
+                                class="flex justify-between items-center bg-blue-50 p-2 rounded border border-blue-100">
+                                <span class="font-bold text-blue-800">A</span>
+                                <span class="font-mono text-gray-500">Old: 100</span>
+                            </div>
+                            <div class="flex justify-between items-center opacity-60 px-2">
+                                <span>B</span> <span class="font-mono text-xs">Old: 90</span>
+                            </div>
+                            <div class="flex justify-between items-center opacity-40 px-2">
+                                <span>C</span> <span class="font-mono text-xs">Old: 80</span>
+                            </div>
+                        </div>
+
+                        <!-- Action -->
+                        <div class="bg-red-50 p-3 rounded-lg text-xs border border-red-100 text-slate-600">
+                            <p class="mb-1"><i class="fa-solid fa-rotate-right text-red-400 mr-1"></i> 重算 A: <span
+                                    class="font-bold text-red-600">100 &rarr; 60</span></p>
+                            <p class="mb-1 border-t border-red-200 pt-1 mt-1 font-bold">判定: 60 < 90 (B)</p>
+                                    <p class="text-red-700 font-bold"><i class="fa-solid fa-xmark mr-1"></i>A 失去第一，放回
+                                    </p>
+                        </div>
+                    </div>
+
+                    <!-- Round 2: B fails -->
+                    <div
+                        class="glass-card p-5 rounded-xl border border-gray-200 relative group hover:border-red-300 transition-colors">
+                        <div
+                            class="absolute -top-3 -left-3 w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center font-bold text-slate-600 border border-white shadow-sm">
+                            2</div>
+                        <h4 class="text-center font-bold text-slate-700 mb-4 pb-2 border-b border-gray-100">第二轮：考察 B
+                        </h4>
+
+                        <!-- Queue State -->
+                        <div class="space-y-2 mb-4 text-sm">
+                            <div
+                                class="flex justify-between items-center bg-blue-50 p-2 rounded border border-blue-100">
+                                <span class="font-bold text-blue-800">B</span>
+                                <span class="font-mono text-gray-500">Old: 90</span>
+                            </div>
+                            <div class="flex justify-between items-center opacity-60 px-2">
+                                <span>C</span> <span class="font-mono text-xs">Old: 80</span>
+                            </div>
+                            <div class="flex justify-between items-center px-2 text-slate-400">
+                                <span>A</span> <span class="font-mono text-xs">New: 60</span>
+                            </div>
+                        </div>
+
+                        <!-- Action -->
+                        <div class="bg-red-50 p-3 rounded-lg text-xs border border-red-100 text-slate-600">
+                            <p class="mb-1"><i class="fa-solid fa-rotate-right text-red-400 mr-1"></i> 重算 B: <span
+                                    class="font-bold text-red-600">90 &rarr; 70</span></p>
+                            <p class="mb-1 border-t border-red-200 pt-1 mt-1 font-bold">判定: 70 < 80 (C)</p>
+                                    <p class="text-red-700 font-bold"><i class="fa-solid fa-xmark mr-1"></i>B 失去第一，放回
+                                    </p>
+                        </div>
+                    </div>
+
+                    <!-- Round 3: C wins -->
+                    <div
+                        class="glass-card p-5 rounded-xl border-l-4 border-emerald-500 relative bg-emerald-50/10 shadow-lg transform scale-105">
+                        <div
+                            class="absolute -top-3 -left-3 w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center font-bold text-white border-2 border-white shadow-sm">
+                            3</div>
+                        <h4 class="text-center font-bold text-emerald-800 mb-4 pb-2 border-b border-emerald-100">第三轮：考察
+                            C</h4>
+
+                        <!-- Queue State -->
+                        <div class="space-y-2 mb-4 text-sm">
+                            <div
+                                class="flex justify-between items-center bg-emerald-100 p-2 rounded border border-emerald-200 shadow-sm">
+                                <span class="font-bold text-emerald-800">C</span>
+                                <span class="font-mono text-emerald-700">Old: 80</span>
+                            </div>
+                            <div class="flex justify-between items-center px-2 text-slate-400">
+                                <span>B</span> <span class="font-mono text-xs">New: 70</span>
+                            </div>
+                            <div class="flex justify-between items-center px-2 text-slate-400">
+                                <span>A</span> <span class="font-mono text-xs">New: 60</span>
+                            </div>
+                        </div>
+
+                        <!-- Action -->
+                        <div class="bg-emerald-50 p-3 rounded-lg text-xs border border-emerald-100 text-slate-600">
+                            <p class="mb-1"><i class="fa-solid fa-rotate-right text-emerald-500 mr-1"></i> 重算 C: <span
+                                    class="font-bold text-emerald-600">80 &rarr; 75</span></p>
+                            <p class="mb-1 border-t border-emerald-200 pt-1 mt-1 font-bold">判定: 75 > 70 (B)</p>
+                            <div
+                                class="flex items-center gap-2 mt-2 text-emerald-700 font-bold bg-white p-2 rounded border border-emerald-200 justify-center">
+                                <i class="fa-solid fa-check-circle text-lg"></i> 选中 C!
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Summary Arrow -->
+                <div class="mt-8 text-center animate-enter delay-200">
+                    <p
+                        class="text-slate-500 text-sm bg-white/50 inline-block px-6 py-2 rounded-full border border-gray-200">
+                        <i class="fa-solid fa-info-circle mr-2 text-blue-400"></i>
+                        结论：即便 A 和 B 初始期望很高，但在考虑当前上下文后，C 才是真正的增益最大者。
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 8: 实验设置 (Refactored) -->
+        <section class="slide">
+            <div class="container mx-auto px-12 h-full flex flex-col justify-center">
+                <h2 class="text-4xl font-bold text-slate-800 mb-12 animate-enter text-center">07 实验设置 (Experimental
+                    Setup)</h2>
+
+                <div class="grid grid-cols-3 gap-8 animate-enter delay-100 items-stretch">
+
+                    <!-- Physical Environment -->
+                    <div
+                        class="glass-card p-8 rounded-xl border-t-4 border-blue-500 flex flex-col hover:-translate-y-1 transition-transform">
+                        <h4 class="font-bold text-slate-700 mb-6 flex items-center text-lg">
+                            <span
+                                class="w-10 h-10 rounded bg-blue-100 text-blue-600 flex items-center justify-center mr-3 text-lg"><i
+                                    class="fa-solid fa-cube"></i></span>
+                            物理环境
+                        </h4>
+                        <ul class="space-y-4 text-base text-slate-600 flex-grow">
+                            <li class="flex justify-between border-b border-gray-100 pb-2">
+                                <span>三维声波模型</span>
+                                <span class="font-mono font-bold text-blue-700">51 &times; 51 &times; 51</span>
+                            </li>
+                            <li class="flex justify-between">
+                                <span>介质属性</span>
+                                <span class="font-mono text-sm bg-slate-100 px-2 py-1 rounded">\( V_p = 2.0 \text{
+                                    km/s} \)</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Parameters -->
+                    <div
+                        class="glass-card p-8 rounded-xl border-t-4 border-amber-500 flex flex-col hover:-translate-y-1 transition-transform">
+                        <h4 class="font-bold text-slate-700 mb-6 flex items-center text-lg">
+                            <span
+                                class="w-10 h-10 rounded bg-amber-100 text-amber-600 flex items-center justify-center mr-3 text-lg"><i
+                                    class="fa-solid fa-sliders"></i></span>
+                            参数配置
+                        </h4>
+                        <div class="space-y-6 text-base text-slate-600 flex-grow">
+                            <div>
+                                <span class="font-bold text-slate-800 block mb-2">候选集合 (\(V\))</span>
+                                <p class="text-sm text-slate-500">固定深度 \(Z=20m\) 平面的 <span
+                                        class="font-bold text-amber-600">80</span> 个均匀分布点。</p>
+                            </div>
+                            <div>
+                                <span class="font-bold text-slate-800 block mb-2">预算约束 (\(K\))</span>
+                                <p class="text-sm text-slate-500">目标选择 <span
+                                        class="font-bold text-emerald-600">\(K=15\)</span>
+                                    个最优震源。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Baselines -->
+                    <div
+                        class="glass-card p-8 rounded-xl border-t-4 border-purple-500 flex flex-col hover:-translate-y-1 transition-transform">
+                        <h4 class="font-bold text-slate-700 mb-6 flex items-center text-lg">
+                            <span
+                                class="w-10 h-10 rounded bg-purple-100 text-purple-600 flex items-center justify-center mr-3 text-lg"><i
+                                    class="fa-solid fa-code-compare"></i></span>
+                            对比算法
+                        </h4>
+                        <div class="flex flex-col gap-3 text-sm flex-grow justify-center">
+                            <span
+                                class="bg-gray-100 text-gray-600 px-4 py-3 rounded-lg border border-gray-200 block text-center">1.
+                                Random Sampling</span>
+                            <span
+                                class="bg-emerald-50 text-emerald-700 px-4 py-3 rounded-lg border border-emerald-100 font-bold block text-center shadow-sm">2.
+                                Lazy Greedy (Ours)</span>
+                            <span
+                                class="bg-purple-50 text-purple-700 px-4 py-3 rounded-lg border border-purple-100 block text-center">3.
+                                Local Search</span>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 9: 优化效果对比 (Optimization Performance) -->
+        <section class="slide">
+            <div class="container mx-auto px-12 h-full flex flex-col justify-center">
+                <h2 class="text-4xl font-bold text-slate-800 mb-6 animate-enter text-center">08 优化效果对比 (Optimization
+                    Performance)</h2>
+
+                <div class="flex flex-col gap-6 animate-enter delay-100 h-auto">
+
+                    <!-- Top: Metrics & Interpretation (Split) -->
+                    <div class="grid grid-cols-12 gap-6">
+                        <!-- Objective Value Metric -->
+                        <div
+                            class="col-span-4 glass-card p-5 rounded-xl border-l-4 border-blue-500 flex flex-col justify-center">
+                            <h4 class="font-bold text-slate-700 mb-2 flex items-center">
+                                <i class="fa-solid fa-chart-bar text-blue-500 mr-2"></i> 目标函数值
+                            </h4>
+                            <p class="text-sm text-slate-600 mb-2">
+                                指标：负对数行列式 <span class="font-mono bg-slate-100 px-1 rounded">\(-\log
+                                    \det(\mathbf{F}_S)\)</span>
+                            </p>
+                            <span
+                                class="inline-block bg-blue-50 text-blue-700 text-xs font-bold px-2 py-1 rounded border border-blue-100 w-fit">
+                                <i class="fa-solid fa-arrow-down mr-1"></i> Lower is Better
+                            </span>
+                        </div>
+
+                        <!-- Data Interpretation -->
+                        <div
+                            class="col-span-8 glass-card p-5 rounded-xl border border-gray-200 flex flex-col justify-center">
+                            <h4 class="font-bold text-slate-800 mb-3 border-b border-gray-100 pb-2">数据解读</h4>
+                            <ul class="grid grid-cols-3 gap-4 text-sm">
+                                <li class="flex flex-col gap-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-2 h-2 rounded-full bg-cyan-400 shrink-0 shadow-sm"></span>
+                                        <span class="font-bold text-cyan-600 text-xs">Random</span>
+                                    </div>
+                                    <p class="text-slate-500 text-[10px] leading-tight">误差最大，不确定性最高。</p>
+                                </li>
+                                <li class="flex flex-col gap-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-2 h-2 rounded-full bg-purple-500 shrink-0 shadow-sm"></span>
+                                        <span class="font-bold text-purple-700 text-xs">Greedy</span>
+                                    </div>
+                                    <p class="text-slate-500 text-[10px] leading-tight">显著优于随机，已非常接近最优解。</p>
+                                </li>
+                                <li class="flex flex-col gap-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-2 h-2 rounded-full bg-red-500 shrink-0 shadow-sm"></span>
+                                        <span class="font-bold text-red-700 text-xs">Local Search</span>
+                                    </div>
+                                    <p class="text-slate-500 text-[10px] leading-tight">进一步挖掘潜在收益，实现最低目标值。</p>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Bottom: Visualizations (Side by Side) -->
+                    <div class="grid grid-cols-2 gap-8 h-80">
+
+                        <!-- Image 1: Bar Chart -->
+                        <div
+                            class="glass-card p-0 rounded-xl border border-gray-200 overflow-hidden shadow-xl bg-white flex flex-col h-full hover:-translate-y-1 transition-transform duration-300">
+                            <!-- Mac Title Bar -->
+                            <div
+                                class="bg-gray-100 px-4 py-2 border-b border-gray-200 flex items-center justify-between shrink-0 h-8">
+                                <div class="flex gap-1.5">
+                                    <div class="w-2.5 h-2.5 rounded-full bg-[#ff5f56] border border-[#e0443e]"></div>
+                                    <div class="w-2.5 h-2.5 rounded-full bg-[#ffbd2e] border border-[#dea123]"></div>
+                                    <div class="w-2.5 h-2.5 rounded-full bg-[#27c93f] border border-[#1aab29]"></div>
+                                </div>
+                                <span class="text-[10px] font-mono text-gray-500 font-bold"></span>
+                                <div class="w-10"></div>
+                            </div>
+                            <!-- Image Container -->
+                            <div
+                                class="flex-grow flex items-center justify-center bg-white p-2 relative overflow-hidden group">
+                                <img src="assets/f7.png" class="w-full h-full object-contain"
+                                    alt="Objective Value Bar Chart">
+                            </div>
+                        </div>
+
+                        <!-- Image 2: Convergence Curve -->
+                        <div
+                            class="glass-card p-0 rounded-xl border border-gray-200 overflow-hidden shadow-xl bg-white flex flex-col h-full hover:-translate-y-1 transition-transform duration-300">
+                            <!-- Mac Title Bar -->
+                            <div
+                                class="bg-gray-100 px-4 py-2 border-b border-gray-200 flex items-center justify-between shrink-0 h-8">
+                                <div class="flex gap-1.5">
+                                    <div class="w-2.5 h-2.5 rounded-full bg-[#ff5f56] border border-[#e0443e]"></div>
+                                    <div class="w-2.5 h-2.5 rounded-full bg-[#ffbd2e] border border-[#dea123]"></div>
+                                    <div class="w-2.5 h-2.5 rounded-full bg-[#27c93f] border border-[#1aab29]"></div>
+                                </div>
+                                <span class="text-[10px] font-mono text-gray-500 font-bold"></span>
+                                <div class="w-10"></div>
+                            </div>
+                            <!-- Image Container -->
+                            <div
+                                class="flex-grow flex items-center justify-center bg-white p-2 relative overflow-hidden group">
+                                <img src="assets/f5.png" class="w-full h-full object-contain" alt="Convergence Curve">
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 10: 算法效率分析 (Computational Efficiency) -->
+        <section class="slide">
+            <div class="container mx-auto px-12 h-full flex flex-col justify-center">
+                <h2 class="text-4xl font-bold text-slate-800 mb-8 animate-enter">09 算法效率分析 (Computational Efficiency)
+                </h2>
+
+                <div class="grid grid-cols-12 gap-10 h-auto items-center">
+
+                    <!-- Left: Analysis Content -->
+                    <div class="col-span-5 flex flex-col gap-6 animate-enter delay-100">
+
+                        <!-- Analysis Goal -->
+                        <div class="glass-card p-5 rounded-xl border-l-4 border-blue-500">
+                            <h4 class="font-bold text-slate-700 mb-2 flex items-center">
+                                <i class="fa-solid fa-stopwatch text-blue-500 mr-2"></i> 时间复杂度分析
+                            </h4>
+                            <p class="text-sm text-slate-600">
+                                考察当选择数量 <span class="font-mono font-bold text-blue-700">K</span> 从 10 增加到 30
+                                时，不同算法的计算耗时变化。
+                            </p>
+                        </div>
+
+                        <!-- Key Findings -->
+                        <div class="glass-card p-6 rounded-xl border border-gray-200">
+                            <h4 class="font-bold text-slate-800 mb-4 border-b border-gray-100 pb-2">关键发现</h4>
+                            <ul class="space-y-4 text-sm">
+                                <li class="flex gap-3">
+                                    <span
+                                        class="w-3 h-3 rounded-full bg-purple-500 mt-1.5 shrink-0 shadow-sm border border-purple-200"></span>
+                                    <div>
+                                        <span class="font-bold text-purple-700">Lazy Greedy</span>
+                                        <p class="text-slate-600 text-xs mt-1 leading-relaxed">
+                                            高效且惰性机制成功避免了大量冗余计算。
+                                        </p>
+                                    </div>
+                                </li>
+                                <li class="flex gap-3">
+                                    <span
+                                        class="w-3 h-3 rounded-full bg-red-500 mt-1.5 shrink-0 shadow-sm border border-red-200"></span>
+                                    <div>
+                                        <span class="font-bold text-red-700">Local Search</span>
+                                        <p class="text-slate-600 text-xs mt-1 leading-relaxed">
+                                            相比之下耗时略高。
+                                        </p>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- Conclusion -->
+                        <div
+                            class="glass-card p-4 rounded-xl border-t-4 border-emerald-500 bg-emerald-50/30 text-center">
+                            <p class="text-xs text-emerald-600 font-bold uppercase tracking-widest mb-1">Conclusion</p>
+                            <p class="text-slate-700 font-bold text-sm">
+                                惰性贪心策略在工程实时性上具有<span class="text-emerald-700 text-lg mx-1">压倒性优势</span>。
+                            </p>
+                        </div>
+
+                    </div>
+
+                    <!-- Right: Mac Style Image Placeholder (Chart) -->
+                    <div class="col-span-7 animate-enter delay-200 h-full">
+                        <div
+                            class="glass-card p-0 rounded-xl border border-gray-200 overflow-hidden shadow-2xl bg-white h-full flex flex-col">
+                            <!-- Mac Title Bar -->
+                            <div
+                                class="bg-gray-100 px-4 py-3 border-b border-gray-200 flex items-center justify-between shrink-0">
+                                <div class="flex gap-2">
+                                    <div class="w-3 h-3 rounded-full bg-[#ff5f56] border border-[#e0443e]"></div>
+                                    <div class="w-3 h-3 rounded-full bg-[#ffbd2e] border border-[#dea123]"></div>
+                                    <div class="w-3 h-3 rounded-full bg-[#27c93f] border border-[#1aab29]"></div>
+                                </div>
+                                <span class="text-xs font-mono text-gray-500 font-bold"></span>
+                                <div class="w-10"></div>
+                            </div>
+
+                            <!-- Image Area -->
+                            <div
+                                class="flex-grow bg-white flex items-center justify-center p-2 relative overflow-hidden group">
+                                <img src="assets/f6.png" class="w-full h-full object-contain max-h-80"
+                                    alt="Time Scalability Plot">
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 11: 空间分布可视化 (Spatial Configuration) -->
+        <section class="slide">
+            <div class="container mx-auto px-12 h-full flex flex-col justify-center">
+                <h2 class="text-4xl font-bold text-slate-800 mb-8 animate-enter">10 空间分布可视化 (Spatial Configuration)</h2>
+
+                <div class="grid grid-cols-2 gap-10 h-auto items-center max-w-6xl mx-auto">
+
+                    <!-- Left: 3D Scatter Plot (Mac Window) -->
+                    <div class="animate-enter delay-100 h-full">
+                        <div
+                            class="glass-card p-0 rounded-xl border border-gray-200 overflow-hidden shadow-2xl bg-white h-full flex flex-col">
+                            <!-- Mac Title Bar -->
+                            <div
+                                class="bg-gray-100 px-4 py-3 border-b border-gray-200 flex items-center justify-between shrink-0">
+                                <div class="flex gap-2">
+                                    <div class="w-3 h-3 rounded-full bg-[#ff5f56] border border-[#e0443e]"></div>
+                                    <div class="w-3 h-3 rounded-full bg-[#ffbd2e] border border-[#dea123]"></div>
+                                    <div class="w-3 h-3 rounded-full bg-[#27c93f] border border-[#1aab29]"></div>
+                                </div>
+                                <span class="text-xs font-mono text-gray-500 font-bold"></span>
+                                <div class="w-10"></div>
+                            </div>
+
+                            <!-- Image Visualization -->
+                            <div
+                                class="flex-grow bg-white flex items-center justify-center p-2 relative overflow-hidden group">
+                                <img src="assets/f4.png" class="w-full h-full object-contain max-h-80"
+                                    alt="Spatial Distribution">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Analysis & Conclusion -->
+                    <div class="flex flex-col gap-6 animate-enter delay-200">
+
+                        <!-- Legend -->
+                        <div class="glass-card p-4 rounded-xl border border-gray-200 bg-white/50">
+                            <h4 class="font-bold text-slate-700 text-xs uppercase tracking-widest mb-3">Legend</h4>
+                            <div class="flex gap-4 text-sm">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-3 h-3 rounded-full bg-amber-200 border border-amber-300"></span>
+                                    <span class="text-slate-600">Candidates (All)</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        class="w-3 h-3 rounded-full bg-red-500 border border-red-600 shadow-sm"></span>
+                                    <span class="text-slate-800 font-bold">Selected (Optimal)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Geometric Analysis -->
+                        <div class="glass-card p-6 rounded-xl border-l-4 border-indigo-500">
+                            <h4 class="font-bold text-slate-700 mb-4 flex items-center">
+                                <i class="fa-solid fa-shapes text-indigo-500 mr-2"></i> 几何特征分析
+                            </h4>
+                            <ul class="space-y-4 text-sm">
+                                <li class="group">
+                                    <span
+                                        class="font-bold text-indigo-700 block mb-1 group-hover:text-indigo-600 transition-colors">
+                                        <i class="fa-solid fa-expand mr-1"></i> 最大化空间支撑
+                                    </span>
+                                    <p class="text-slate-600 text-xs leading-relaxed">
+                                        选出的点没有聚集，而是<span
+                                            class="font-bold text-slate-800">均匀撑开</span>了整个观测平面，保证了对地下结构的全面照明。
+                                    </p>
+                                </li>
+                                <li class="group">
+                                    <span
+                                        class="font-bold text-indigo-700 block mb-1 group-hover:text-indigo-600 transition-colors">
+                                        <i class="fa-solid fa-border-all mr-1"></i> 边界覆盖 (Edge Coverage)
+                                    </span>
+                                    <p class="text-slate-600 text-xs leading-relaxed">
+                                        算法自动选取了边缘和角落的点，最大化了<span class="font-bold text-slate-800">观测孔径
+                                            (Aperture)</span>。
+                                    </p>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- Conclusion -->
+                        <div
+                            class="glass-card p-4 rounded-xl border-t-4 border-emerald-500 bg-emerald-50/30 text-center">
+                            <div class="flex items-center justify-center gap-2 mb-1">
+                                <i class="fa-solid fa-circle-check text-emerald-500"></i>
+                                <span
+                                    class="text-xs text-emerald-600 font-bold uppercase tracking-widest">Insight</span>
+                            </div>
+                            <p class="text-slate-700 font-bold text-sm">
+                                算法自动实现了<br><span class="text-emerald-700 text-lg">几何覆盖的最优化</span>
+                            </p>
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 12: 总结 (Conclusion) -->
+<section class="slide">
+            <div class="flex flex-col items-center justify-center h-full max-w-6xl mx-auto text-center animate-enter">
+                <div class="blob bg-emerald-200 w-96 h-96 opacity-20 -z-10"></div>
+
+                <h2 class="text-4xl font-bold text-slate-800 mb-12">11 总结 (Conclusion)</h2>
+
+                <div class="grid grid-cols-2 gap-12 w-full max-w-5xl mx-auto items-stretch">
+                    
+                    <div class="glass-card p-8 rounded-2xl shadow-sm border-t-4 border-blue-500 hover:-translate-y-1 transition-transform flex flex-col">
+                        <div class="w-16 h-16 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-3xl mb-6 mx-auto shrink-0">
+                            <i class="fa-solid fa-flask"></i>
+                        </div>
+                        <h4 class="text-xl font-bold text-slate-800 mb-4">方法论与实证对比</h4>
+                        <ul class="text-sm text-slate-600 leading-relaxed text-left space-y-4 list-disc pl-4 flex-grow">
+                            <li>
+                                <span class="font-bold text-slate-700">系统构建：</span>
+                                建立了基于组合优化的全波反演 (FWI) 观测系统。
+                            </li>
+                            <li>
+                                <span class="font-bold text-slate-700">算法实现：</span>
+                                实现了 <span class="font-mono bg-blue-50 px-1 rounded text-blue-600">Lazy Greedy</span> 与
+                                <span class="font-mono bg-blue-50 px-1 rounded text-blue-600">Local Search</span>
+                                两种不同策略，并引入 Random Sampling 作为基准。
+                            </li>
+                            <li>
+                                <span class="font-bold text-slate-700">对比验证：</span>
+                                在相同实验设置下，对三种不同算法的实现进行了对比验证。
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="glass-card p-8 rounded-2xl shadow-sm border-t-4 border-emerald-500 hover:-translate-y-1 transition-transform flex flex-col bg-emerald-50/30">
+                        <div class="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-3xl mb-6 mx-auto shrink-0">
+                            <i class="fa-solid fa-chart-line"></i>
+                        </div>
+                        <h4 class="text-xl font-bold text-slate-800 mb-4">多维度性能评估</h4>
+                        <ul class="text-sm text-slate-600 leading-relaxed text-left space-y-4 list-disc pl-4 flex-grow">
+                            <li>
+                                <span class="font-bold text-emerald-700">解的质量 (Quality)：</span>
+                                Lazy Greedy 目标函数值显著优于随机采样，且逼近局部搜索算法。
+                            </li>
+                            <li>
+                                <span class="font-bold text-emerald-700">计算效率 (Time)：</span>
+                                利用边际增益递减特性，Lazy 机制避免了大量冗余计算，耗时大幅降低。
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 13: 结束页 (Thank You) -->
+        <section class="slide">
+            <div
+                class="flex flex-col items-center justify-center h-full w-full animate-enter text-center relative overflow-hidden">
+                <!-- Background Decorations -->
+                <div class="blob bg-emerald-300 w-[500px] h-[500px] top-[-10%] right-[-10%] opacity-20"></div>
+                <div class="blob bg-blue-300 w-[400px] h-[400px] bottom-[-10%] left-[-10%] opacity-20"></div>
+
+                <div class="z-10">
+                    <div class="mb-8">
+                        <i
+                            class="fa-solid fa-circle-check text-7xl text-emerald-500 mb-6 drop-shadow-md animate-bounce"></i>
+                    </div>
+
+                    <h1 class="text-6xl font-black text-slate-800 mb-4 tracking-tight">谢谢聆听</h1>
+                    <p class="text-2xl text-slate-500 font-light mb-12 font-serif italic">Thank You for Listening</p>
+
+                    <div
+                        class="inline-block px-10 py-4 rounded-2xl bg-white/60 backdrop-blur-md border border-slate-200 shadow-sm mb-12">
+                        <p class="text-xl font-bold text-indigo-600 flex items-center gap-3">
+                            <i class="fa-regular fa-comments"></i> Q & A
+                        </p>
+                    </div>
+
+                    <div>
+                        <button onclick="goToSlide(0)"
+                            class="group px-8 py-3 rounded-full border-2 border-slate-300 text-slate-500 font-bold hover:border-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 transition-all flex items-center gap-2 mx-auto">
+                            <i
+                                class="fa-solid fa-rotate-left group-hover:-rotate-180 transition-transform duration-500"></i>
+                            重新播放
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        const slides = document.querySelectorAll('.slide');
+        const progressBar = document.getElementById('progress');
+        const currentEl = document.getElementById('current-slide');
+        const totalEl = document.getElementById('total-slides');
+        const fsIcon = document.getElementById('fs-icon');
+
+        let currentIndex = 0;
+        const totalSlides = slides.length;
+
+        // 初始化
+        totalEl.innerText = totalSlides;
+        updateSlide(0);
+
+        function goToSlide(index) {
+            currentIndex = index;
+            updateSlide(currentIndex);
+        }
+
+        function nextSlide() {
+            if (currentIndex < totalSlides - 1) {
+                currentIndex++;
+                updateSlide(currentIndex);
+            }
+        }
+
+        function prevSlide() {
+            if (currentIndex > 0) {
+                currentIndex--;
+                updateSlide(currentIndex);
+            }
+        }
+
+        function updateSlide(index) {
+            slides.forEach((slide, i) => {
+                slide.classList.remove('active', 'prev');
+                if (i === index) {
+                    slide.classList.add('active');
+                } else if (i < index) {
+                    slide.classList.add('prev');
+                }
+            });
+
+            const progress = ((index + 1) / totalSlides) * 100;
+            progressBar.style.width = `${progress}%`;
+            currentEl.innerText = index + 1;
+        }
+
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+                fsIcon.classList.remove('fa-expand');
+                fsIcon.classList.add('fa-compress');
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                    fsIcon.classList.remove('fa-compress');
+                    fsIcon.classList.add('fa-expand');
+                }
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.code === 'Space') {
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                prevSlide();
+            }
+        });
+    </script>
+</body>
+
+</html>
